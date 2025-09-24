@@ -1,0 +1,9 @@
+name: ibl-widefield-to-nwb-env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python>=3.11
+  - pip
+  - pip:
+      - --editable . # This calls the setup and therefore requirements minimal
