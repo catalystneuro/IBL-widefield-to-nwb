@@ -1,2 +1,3 @@
 from .behaviorinterface import Widefield2025BehaviorInterface
+from .ibl_widefield_segmentationinterface import WidefieldSegmentationInterface
 from .nwbconverter import Widefield2025NWBConverter
