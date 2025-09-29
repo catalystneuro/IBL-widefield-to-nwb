@@ -23,17 +23,19 @@ def session_to_nwb(data_dir_path: Union[str, Path], output_dir_path: Union[str, 
     source_data = dict()
     conversion_options = dict()
 
-    # Add Recording
-    source_data.update(dict(Recording=dict()))
-    conversion_options.update(dict(Recording=dict(stub_test=stub_test)))
+    # Add Imaging
+    # source_data.update(dict(ImagingBlue=dict()))
+    # conversion_options.update(dict(ImagingViolet=dict(stub_test=stub_test)))
 
-    # Add Sorting
-    source_data.update(dict(Sorting=dict()))
-    conversion_options.update(dict(Sorting=dict()))
+    # Add Segmentation
+    source_data.update(dict(SegmentationBlue=dict(folder_path="/Users/weian/data/IBL", channel_id=2)))
+    conversion_options.update(dict(SegmentationBlue=dict(plane_segmentation_name="plane_segmentation_blue", stub_test=stub_test)))
+    source_data.update(dict(SegmentationViolet=dict(folder_path="/Users/weian/data/IBL", channel_id=1)))
+    conversion_options.update(dict(SegmentationViolet=dict(plane_segmentation_name="plane_segmentation_violet", stub_test=stub_test)))
 
     # Add Behavior
-    source_data.update(dict(Behavior=dict()))
-    conversion_options.update(dict(Behavior=dict()))
+    # source_data.update(dict(Behavior=dict()))
+    # conversion_options.update(dict(Behavior=dict()))
 
     converter = Widefield2025NWBConverter(source_data=source_data)
 
@@ -43,28 +45,30 @@ def session_to_nwb(data_dir_path: Union[str, Path], output_dir_path: Union[str, 
     metadata["NWBFile"]["session_start_time"] = date
 
     # Update default metadata with the editable in the corresponding yaml file
-    editable_metadata_path = Path(__file__).parent / "widefield2025_metadata.yaml"
+    editable_metadata_path = Path(__file__).parent / "metadata" / "widefield_general_metadata.yaml"
     editable_metadata = load_dict_from_file(editable_metadata_path)
     metadata = dict_deep_update(metadata, editable_metadata)
+
+    # Update ophys metadata
+    ophys_metadata_path = Path(__file__).parent / "metadata" / "ophys_metadata.yaml"
+    ophys_metadata = load_dict_from_file(ophys_metadata_path)
+    metadata = dict_deep_update(metadata, ophys_metadata)
 
     metadata["Subject"]["subject_id"] = "a_subject_id"  # Modify here or in the yaml file
 
     # Run conversion
-    converter.run_conversion(metadata=metadata, nwbfile_path=nwbfile_path, conversion_options=conversion_options)
+    converter.run_conversion(
+        metadata=metadata,
+        nwbfile_path=nwbfile_path,
+        conversion_options=conversion_options,
+        overwrite=True,
+    )
 
 
 if __name__ == "__main__":
 
     # Parameters for conversion
-    data_dir_path = Path("/Directory/With/Raw/Formats/")
-    output_dir_path = Path("~/conversion_nwb/")
-    stub_test = False
-
-<<<<<<< HEAD:IBL-widefield-to-nwb/src/ibl_widefield_to_nwb/widefield2025/convert_session.py
+    data_dir_path = Path("/Users/weian/data/IBL")
+    output_dir_path = Path("/Users/weian/data/IBL/nwbfiles")
+    stub_test = True
     session_to_nwb(data_dir_path=data_dir_path, output_dir_path=output_dir_path, stub_test=stub_test)
-=======
-    session_to_nwb(data_dir_path=data_dir_path,
-                    output_dir_path=output_dir_path,
-                    stub_test=stub_test,
-                    )
->>>>>>> main:IBL-widefield-to-nwb/src/ibl_widefield_to_nwb/widefield2025/widefield2025_convert_session.py
