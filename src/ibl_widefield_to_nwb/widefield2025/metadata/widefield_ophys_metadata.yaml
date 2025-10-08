@@ -3,47 +3,51 @@ Ophys:
     - name: widefield_microscope
       description: The widefield microscope used to acquire simultaneous dual-wavelength imaging (blue/violet) at ~30 Hz.
   ImagingPlane:
-    - name: imaging_plane_blue
+    - name: imaging_plane_calcium # could be also "imaging_plane_calcium" or "imaging_plane_signal" and "control"
       description: The imaging plane for widefield fluorescence under blue excitation at 470 nm (GCaMP signal).
       excitation_lambda: 470.0  # in nm
       location: unknown # TODO
-      indicator: GCaMP6
+      indicator: GCaMP6f # Maybe this was only for Mesoscope and not for Widefield
       optical_channel:
-        - name: optical_channel_blue
+        - name: optical_channel_calcium
           emission_lambda: 510.0  # in nm (peak emission wavelength)  # TODO
           description: GCaMP excitation LED (470 nm) (Thorlabs, cat. no. M470L4)
       device: widefield_microscope
-    - name: imaging_plane_violet
+    - name: imaging_plane_isosbestic
       description: The imaging plane for widefield fluorescence under violet excitation at 405 nm (isosbestic control).
       excitation_lambda: 405.0 # in nm
       location: unknown # TODO
-      indicator: GCaMP6
+      indicator: GCaMP6f
       optical_channel:
-        - name: optical_channel_violet
+        - name: optical_channel_isosbestic
           emission_lambda: 510.0  # in nm (peak emission wavelength)  # TODO
           description: Hemodynamic correction LED (405 nm) (Thorlabs, cat. no. M405L4)
       device: widefield_microscope
+  ImageSegmentation:
+    plane_segmentations:
+      - name: plane_segmentation_calcium
+      - name: plane_segmentation_isosbestic
   Fluorescence:
-    plane_segmentation_blue:
+    plane_segmentation_calcium:
       raw:
         name: roi_response_series
         description: The raw GCaMP fluorescence traces collected during 470 nm illumination (before hemodynamic correction).
         unit: n.a.
-    plane_segmentation_violet:
+    plane_segmentation_isosbestic:
       raw:
         name: roi_response_series_isosbestic
         description: The raw GCaMP fluorescence traces collected at its isosbestic wavelength (405 nm) for heamodynamic correction.
   DfOverF:
-    plane_segmentation_blue:
+    plane_segmentation_calcium:
       dff:
         name: roi_response_series
         description: The dF/F traces from the blue (GCaMP) channel, after applying hemodynamic correction.
   SegmentationImages:
-    plane_segmentation_blue:
+    plane_segmentation_calcium:
       mean:
         name: mean_image
         description: The mean image under blue (470 nm) excitation across the imaging session.
-    plane_segmentation_violet:
+    plane_segmentation_isosbestic:
       mean:
         name: mean_image_isosbestic
         description: The mean image under violet (405 nm) excitation across the imaging session.
