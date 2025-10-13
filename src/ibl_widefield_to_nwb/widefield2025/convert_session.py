@@ -29,9 +29,9 @@ def session_to_nwb(data_dir_path: Union[str, Path], output_dir_path: Union[str, 
 
     # Add Segmentation
     source_data.update(dict(SegmentationBlue=dict(folder_path="/Users/weian/data/IBL", channel_id=2)))
-    conversion_options.update(dict(SegmentationBlue=dict(plane_segmentation_name="plane_segmentation_blue", stub_test=stub_test)))
+    conversion_options.update(dict(SegmentationBlue=dict(plane_segmentation_name="plane_segmentation_calcium", stub_test=stub_test)))
     source_data.update(dict(SegmentationViolet=dict(folder_path="/Users/weian/data/IBL", channel_id=1)))
-    conversion_options.update(dict(SegmentationViolet=dict(plane_segmentation_name="plane_segmentation_violet", stub_test=stub_test)))
+    conversion_options.update(dict(SegmentationViolet=dict(plane_segmentation_name="plane_segmentation_isosbestic", stub_test=stub_test)))
 
     # Add Behavior
     # source_data.update(dict(Behavior=dict()))
@@ -50,7 +50,7 @@ def session_to_nwb(data_dir_path: Union[str, Path], output_dir_path: Union[str, 
     metadata = dict_deep_update(metadata, editable_metadata)
 
     # Update ophys metadata
-    ophys_metadata_path = Path(__file__).parent / "metadata" / "ophys_metadata.yaml"
+    ophys_metadata_path = Path(__file__).parent / "metadata" / "widefield_ophys_metadata.yaml"
     ophys_metadata = load_dict_from_file(ophys_metadata_path)
     metadata = dict_deep_update(metadata, ophys_metadata)
 

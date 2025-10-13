@@ -46,22 +46,23 @@ class WidefieldSegmentationInterface(BaseSegmentationExtractorInterface):
 
         color = imaging_light_source_properties["color"]
         excitation_wavelength = float(imaging_light_source_properties["wavelength"])
+        suffix = "calcium" if excitation_wavelength == 470.0 else "isosbestic"
         imaging_plane_metadata.update(
-            name=f"imaging_plane_{color.lower()}",
-            description=f"The imaging plane for widefield calcium imaging from {color} channel.",
+            name=f"imaging_plane_{suffix}",
+            description=f"The imaging plane for calcium imaging from {color} channel.",
             excitation_lambda=excitation_wavelength,
         )
         optical_channel_metadata = imaging_plane_metadata["optical_channel"][0]
         # Additional metadata would be loaded from yaml
         emission_lambda = np.nan  # Placeholder for now
         optical_channel_metadata.update(
-            description="Optical channel for widefield calcium imaging",
+            description="Optical channel for calcium imaging",
             emission_lambda=emission_lambda,
         )
 
         image_segmentation_metadata = metadata_copy["Ophys"]["ImageSegmentation"]
         plane_segmentations_metadata = image_segmentation_metadata['plane_segmentations'][0]
-        plane_segmentation_name = f"plane_segmentation_{color.lower()}"
+        plane_segmentation_name = f"plane_segmentation_{suffix}"
         plane_segmentations_metadata.update(
             name=plane_segmentation_name,
             imaging_plane=imaging_plane_metadata["name"],
@@ -71,10 +72,9 @@ class WidefieldSegmentationInterface(BaseSegmentationExtractorInterface):
         fluorescence_metadata = metadata_copy["Ophys"]["Fluorescence"]
         default_roi_response_raw_metadata = fluorescence_metadata["PlaneSegmentation"]
         default_roi_response_raw_metadata["raw"].update(
-            name=f"roi_response_raw_{color.lower()}",
+            name=f"roi_response_series_{suffix}",
             description=f"Raw fluorescence traces for widefield calcium imaging from {color} channel.",
         )
-        # TODO: also need to change the name of the ROIResponseSeries
         fluorescence_metadata.update(
             {plane_segmentation_name: default_roi_response_raw_metadata}
         )
@@ -84,7 +84,7 @@ class WidefieldSegmentationInterface(BaseSegmentationExtractorInterface):
             dff_metadata = metadata_copy["Ophys"]["DfOverF"]
             default_roi_response_dff_metadata = dff_metadata["PlaneSegmentation"]
             default_roi_response_dff_metadata["dff"].update(
-                name=f"roi_response_dff_{color.lower()}",
+                name="roi_response_series",
                 description=f"Df/F traces for widefield calcium imaging from {color} channel.",
             )
             dff_metadata.update(
@@ -94,7 +94,7 @@ class WidefieldSegmentationInterface(BaseSegmentationExtractorInterface):
         segmentation_images_metadata = metadata_copy["Ophys"]["SegmentationImages"]
         default_image_masks_metadata = segmentation_images_metadata["PlaneSegmentation"]
         default_image_masks_metadata.update(mean=dict(
-            name=f"mean_{color.lower()}",
+            name=f"mean_{suffix}",
             description=f"Mean image for widefield calcium imaging from {color} channel.",
         ))
         segmentation_images_metadata.update(
