@@ -1,0 +1,93 @@
+from copy import deepcopy
+from pathlib import Path
+from typing import Literal
+
+import numpy as np
+from neuroconv.datainterfaces.ophys.baseimagingextractorinterface import BaseImagingExtractorInterface
+from neuroconv.utils import DeepDict
+from pydantic import DirectoryPath
+
+from ibl_widefield_to_nwb.widefield2025.ibl_widefield_imagingextractor import WidefieldImagingExtractor
+
+
+class WidefieldImagingInterface(BaseImagingExtractorInterface):
+    """Data Interface for WidefieldImagingExtractor."""
+
+    display_name = "IBL Widefield Imaging"
+    associated_suffixes = (".mov", ".htsv", ".camlog")
+    info = "Interface for IBL Widefield imaging data."
+
+    Extractor = WidefieldImagingExtractor
+
+    def __init__(
+            self,
+            folder_path: DirectoryPath,
+            channel_id: int | None = None,
+            photon_series_type: Literal["OnePhotonSeries", "TwoPhotonSeries"] = "OnePhotonSeries",
+            verbose: bool = False,
+    ):
+
+        folder_path = Path(folder_path)
+
+        movie_file_paths = list(folder_path.glob("*.frames.mov"))
+        if len(movie_file_paths) == 0:
+            raise FileNotFoundError(f"No .frames.mov files found in folder: {folder_path}")
+        elif len(movie_file_paths) > 1:
+            raise ValueError(f"Multiple .frames.mov files found in folder: {folder_path}. Please ensure only one file is present.")
+        movie_file_path = str(movie_file_paths[0])
+
+        htsv_file_paths = list(folder_path.glob("*.htsv"))
+        if len(htsv_file_paths) == 0:
+            raise FileNotFoundError(f"No .htsv files found in folder: {folder_path}")
+        elif len(htsv_file_paths) > 1:
+            raise ValueError(f"Multiple .htsv files found in folder: {folder_path}. Please ensure only one file is present.")
+        htsv_file_path = str(htsv_file_paths[0])
+
+        camlog_file_paths = list(folder_path.glob("*.camlog"))
+        if len(camlog_file_paths) == 0:
+            raise FileNotFoundError(f"No .camlog files found in folder: {folder_path}")
+        elif len(camlog_file_paths) > 1:
+            raise ValueError(f"Multiple .camlog files found in folder: {folder_path}. Please ensure only one file is present.")
+        camlog_file_path = str(camlog_file_paths[0])
+
+        super().__init__(
+            file_path=movie_file_path,
+            htsv_file_path=htsv_file_path,
+            camlog_file_path=camlog_file_path,
+            channel_id=channel_id,
+            photon_series_type=photon_series_type,
+            verbose=verbose,
+        )
+
+    def get_metadata(self) -> DeepDict:
+        """
+        Get metadata for the Miniscope imaging data.
+
+        Returns
+        -------
+        DeepDict
+            Dictionary containing metadata including device information, imaging plane details,
+            and one-photon series configuration.
+        """
+        metadata = super().get_metadata()
+        metadata_copy = deepcopy(metadata)  # To avoid modifying the parent class's metadata
+        imaging_plane_metadata = metadata_copy["Ophys"]["ImagingPlane"][0]
+
+        imaging_light_source_properties = self.imaging_extractor.get_imaging_light_source_properties()
+
+        excitation_wavelength = float(imaging_light_source_properties["wavelength"])
+        suffix = "calcium" if excitation_wavelength == 470.0 else "isosbestic"
+        imaging_plane_metadata.update(
+            name=f"imaging_plane_{suffix}",
+            excitation_lambda=excitation_wavelength,
+            imaging_rate=self.imaging_extractor.get_sampling_frequency(),
+        )
+
+        one_photon_series_metadata = metadata_copy["Ophys"]["OnePhotonSeries"][0]
+        one_photon_series_metadata.update(
+            name=f"one_photon_series_{suffix}",
+            imaging_plane=imaging_plane_metadata["name"],
+            unit="px",
+        )
+
+        return metadata_copy
