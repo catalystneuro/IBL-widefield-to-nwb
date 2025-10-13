@@ -23,13 +23,11 @@ def session_to_nwb(data_dir_path: Union[str, Path], output_dir_path: Union[str, 
     source_data = dict()
     conversion_options = dict()
 
-    # Add Recording
-    source_data.update(dict(Recording=dict()))
-    conversion_options.update(dict(Recording=dict(stub_test=stub_test)))
-
-    # Add Sorting
-    source_data.update(dict(Sorting=dict()))
-    conversion_options.update(dict(Sorting=dict()))
+    # Add Imaging
+    source_data.update(dict(ImagingBlue=dict(folder_path=data_dir_path / "raw_widefield_data", channel_id=3)))
+    conversion_options.update(dict(ImagingBlue=dict(photon_series_type="OnePhotonSeries", photon_series_index=0, stub_test=stub_test, iterator_options=dict(display_progress=True))))
+    source_data.update(dict(ImagingViolet=dict(folder_path=data_dir_path / "raw_widefield_data", channel_id=2)))
+    conversion_options.update(dict(ImagingViolet=dict(photon_series_type="OnePhotonSeries", photon_series_index=1, stub_test=stub_test, iterator_options=dict(display_progress=True))))
 
     # Add Behavior
     source_data.update(dict(Behavior=dict()))
