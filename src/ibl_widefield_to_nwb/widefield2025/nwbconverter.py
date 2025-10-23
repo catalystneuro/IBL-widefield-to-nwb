@@ -13,3 +13,13 @@ class Widefield2025NWBConverter(NWBConverter):
         SegmentationBlue=WidefieldSegmentationInterface,
         SegmentationViolet=WidefieldSegmentationInterface,
     )
+
+    def temporally_align_data_interfaces(self, metadata: dict | None = None, conversion_options: dict | None = None):
+        for imaging_interface_name, segmentation_interface_name in [
+            ("ImagingBlue", "SegmentationBlue"),
+            ("ImagingViolet", "SegmentationViolet"),
+        ]:
+            segmentation_interface = self.data_interface_objects[segmentation_interface_name]
+            native_timestamps = segmentation_interface.segmentation_extractor.get_native_timestamps()
+            imaging_interface = self.data_interface_objects[imaging_interface_name]
+            imaging_interface.set_aligned_timestamps(aligned_timestamps=native_timestamps)
