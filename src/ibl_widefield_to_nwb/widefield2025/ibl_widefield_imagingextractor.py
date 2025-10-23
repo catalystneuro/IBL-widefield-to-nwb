@@ -210,5 +210,10 @@ class WidefieldImagingExtractor(ImagingExtractor):
         timestamps: numpy.ndarray or None
             The timestamps for the data stream, or None if native timestamps are not available.
         """
-        # TODO read from camlog file
-        return None
+        # Set defaults
+        if start_sample is None:
+            start_sample = 0
+        if end_sample is None:
+            end_sample = self._video_metadata["total_num_samples"]
+
+        return np.array(self._camera_log_metadata[start_sample:end_sample])
