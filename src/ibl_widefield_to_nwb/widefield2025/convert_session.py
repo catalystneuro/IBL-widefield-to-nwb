@@ -41,9 +41,14 @@ def session_to_nwb(data_dir_path: Union[str, Path], output_dir_path: Union[str, 
     metadata["NWBFile"]["session_start_time"] = date
 
     # Update default metadata with the editable in the corresponding yaml file
-    editable_metadata_path = Path(__file__).parent / "widefield2025_metadata.yaml"
+    editable_metadata_path = Path(__file__).parent / "metadata" / "widefield_general_metadata.yaml"
     editable_metadata = load_dict_from_file(editable_metadata_path)
     metadata = dict_deep_update(metadata, editable_metadata)
+
+    # Update ophys metadata
+    ophys_metadata_path = Path(__file__).parent / "metadata" / "widefield_ophys_metadata.yaml"
+    ophys_metadata = load_dict_from_file(ophys_metadata_path)
+    metadata = dict_deep_update(metadata, ophys_metadata)
 
     metadata["Subject"]["subject_id"] = "a_subject_id"  # Modify here or in the yaml file
 
@@ -54,15 +59,7 @@ def session_to_nwb(data_dir_path: Union[str, Path], output_dir_path: Union[str, 
 if __name__ == "__main__":
 
     # Parameters for conversion
-    data_dir_path = Path("/Directory/With/Raw/Formats/")
-    output_dir_path = Path("~/conversion_nwb/")
-    stub_test = False
-
-<<<<<<< HEAD:IBL-widefield-to-nwb/src/ibl_widefield_to_nwb/widefield2025/convert_session.py
+    data_dir_path = Path("/Users/weian/data/IBL")
+    output_dir_path = Path("/Volumes/T9/data/IBL")
+    stub_test = True
     session_to_nwb(data_dir_path=data_dir_path, output_dir_path=output_dir_path, stub_test=stub_test)
-=======
-    session_to_nwb(data_dir_path=data_dir_path,
-                    output_dir_path=output_dir_path,
-                    stub_test=stub_test,
-                    )
->>>>>>> main:IBL-widefield-to-nwb/src/ibl_widefield_to_nwb/widefield2025/widefield2025_convert_session.py
