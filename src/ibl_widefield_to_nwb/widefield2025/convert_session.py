@@ -12,6 +12,8 @@ from ibl_widefield_to_nwb.widefield2025 import WidefieldProcessedNWBConverter
 def processed_imaging_session_to_nwb(
     data_dir_path: str | Path,
     output_dir_path: str | Path,
+    functional_channel_id: int,
+    isosbestic_channel_id: int,
     stub_test: bool = False,
 ):
     """
@@ -33,6 +35,10 @@ def processed_imaging_session_to_nwb(
         Path to the directory containing the processed widefield imaging data.
     output_dir_path: str | Path
         Path to the directory where the NWB file will be saved.
+    functional_channel_id: int
+        The channel ID for the functional (e.g., calcium) imaging data.
+    isosbestic_channel_id: int
+        The channel ID for the isosbestic imaging data.
     stub_test: bool, default: False
         Whether to run a stub test (process a smaller subset of data for testing purposes).
 
@@ -51,11 +57,11 @@ def processed_imaging_session_to_nwb(
     conversion_options = dict()
 
     # Add Segmentation
-    source_data.update(dict(SegmentationBlue=dict(folder_path=data_dir_path, channel_id=2)))
+    source_data.update(dict(SegmentationBlue=dict(folder_path=data_dir_path, channel_id=functional_channel_id)))
     conversion_options.update(
         dict(SegmentationBlue=dict(plane_segmentation_name="plane_segmentation_calcium", stub_test=stub_test))
     )
-    source_data.update(dict(SegmentationViolet=dict(folder_path=data_dir_path, channel_id=1)))
+    source_data.update(dict(SegmentationViolet=dict(folder_path=data_dir_path, channel_id=isosbestic_channel_id)))
     conversion_options.update(
         dict(SegmentationViolet=dict(plane_segmentation_name="plane_segmentation_isosbestic", stub_test=stub_test))
     )
@@ -97,5 +103,14 @@ if __name__ == "__main__":
     # Parameters for conversion
     data_dir_path = Path("/Users/weian/data/IBL")
     output_dir_path = Path("/Users/weian/data/IBL/nwbfiles")
+
+    functional_channel_id = 2  # channel ID for functional imaging
+    isosbestic_channel_id = 1  # channel ID for isosbestic imaging
     stub_test = True
-    processed_imaging_session_to_nwb(data_dir_path=data_dir_path, output_dir_path=output_dir_path, stub_test=stub_test)
+    processed_imaging_session_to_nwb(
+        data_dir_path=data_dir_path,
+        output_dir_path=output_dir_path,
+        functional_channel_id=functional_channel_id,
+        isosbestic_channel_id=isosbestic_channel_id,
+        stub_test=stub_test,
+    )
