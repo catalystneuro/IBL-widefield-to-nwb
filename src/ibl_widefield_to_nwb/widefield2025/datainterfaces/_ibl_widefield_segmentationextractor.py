@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Optional, Any, Dict
+from typing import Any, Dict, Optional
 from warnings import warn
 
 import numpy as np
@@ -152,7 +152,9 @@ class WidefieldSegmentationExtractor(SegmentationExtractor):
 
     def get_imaging_light_source_properties(self) -> Dict[str, Any]:
         all_imaging_light_source_properties = self._load_imaging_light_source_properties()
-        this_properties = all_imaging_light_source_properties[all_imaging_light_source_properties["channel_id"] == self.channel_id]
+        this_properties = all_imaging_light_source_properties[
+            all_imaging_light_source_properties["channel_id"] == self.channel_id
+        ]
         return this_properties.to_dict(orient="records")[0]
 
     def get_imaging_indices(self) -> np.ndarray:
@@ -228,7 +230,6 @@ class WidefieldSegmentationExtractor(SegmentationExtractor):
             end_sample = len(native_timestamps)
 
         return native_timestamps[start_sample:end_sample]
-
 
     def get_frame_shape(self) -> tuple[int, int]:
         """Get frame size of movie (height, width).

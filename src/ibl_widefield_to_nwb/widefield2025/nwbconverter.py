@@ -2,7 +2,9 @@
 
 from neuroconv import NWBConverter
 
-from .ibl_widefield_segmentationinterface import WidefieldSegmentationInterface
+from ibl_widefield_to_nwb.widefield2025.datainterfaces import (
+    WidefieldSegmentationInterface,
+)
 
 
 class WidefieldProcessedNWBConverter(NWBConverter):

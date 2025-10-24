@@ -7,7 +7,7 @@ from neuroconv.datainterfaces.ophys.basesegmentationextractorinterface import (
 from neuroconv.utils import DeepDict
 from pydantic import DirectoryPath
 
-from src.ibl_widefield_to_nwb.widefield2025.ibl_widefield_segmentationextractor import (
+from ibl_widefield_to_nwb.widefield2025.datainterfaces._ibl_widefield_segmentationextractor import (
     WidefieldSegmentationExtractor,
 )
 
