@@ -1,15 +1,42 @@
 """Primary script to run to convert an entire session for of data using the NWBConverter."""
-from pathlib import Path
-from typing import Union
+
 import datetime
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from neuroconv.utils import load_dict_from_file, dict_deep_update
+from neuroconv.utils import dict_deep_update, load_dict_from_file
 
-from ibl_widefield_to_nwb.widefield2025 import Widefield2025NWBConverter
+from ibl_widefield_to_nwb.widefield2025 import WidefieldProcessedNWBConverter
 
 
-def session_to_nwb(data_dir_path: Union[str, Path], output_dir_path: Union[str, Path], stub_test: bool = False):
+def processed_imaging_session_to_nwb(
+    data_dir_path: str | Path,
+    output_dir_path: str | Path,
+    stub_test: bool = False,
+):
+    """
+    Convert a single session of processed widefield imaging data to NWB format.
+
+    Expected file structure:
+    data_dir_path/
+      ├── imaging.imagingLightSource.afbbadcd-be70-410b-becf-db547c6a9d78.npy
+      ├── imaging.times.9f634c9e-33ba-4386-993a-e386fe909397.npy
+      ├── imagingLightSource.properties.3e8acb33-0cee-4ba9-8ad4-5b305b74fee0.htsv
+      ├── widefieldChannels.frameAverage.4b030254-be6d-4e8a-bf40-8316df71b710.npy
+      ├── widefieldSVT.haemoCorrected.fb72c7a7-6165-4931-9d6e-3600b26ea525.npy
+      ├── widefieldSVT.uncorrected.54b4c57c-b25c-4eb9-9d0f-76654d84a005.npy
+      └── widefieldU.images.75628fe6-1c05-4a62-96c9-0478ebfa42b0.npy
+
+    Parameters
+    ----------
+    data_dir_path: str | Path
+        Path to the directory containing the processed widefield imaging data.
+    output_dir_path: str | Path
+        Path to the directory where the NWB file will be saved.
+    stub_test: bool, default: False
+        Whether to run a stub test (process a smaller subset of data for testing purposes).
+
+    """
 
     data_dir_path = Path(data_dir_path)
     output_dir_path = Path(output_dir_path)
@@ -23,21 +50,21 @@ def session_to_nwb(data_dir_path: Union[str, Path], output_dir_path: Union[str, 
     source_data = dict()
     conversion_options = dict()
 
-    # Add Imaging
-    # source_data.update(dict(ImagingBlue=dict()))
-    # conversion_options.update(dict(ImagingViolet=dict(stub_test=stub_test)))
-
     # Add Segmentation
-    source_data.update(dict(SegmentationBlue=dict(folder_path="/Users/weian/data/IBL", channel_id=2)))
-    conversion_options.update(dict(SegmentationBlue=dict(plane_segmentation_name="plane_segmentation_calcium", stub_test=stub_test)))
-    source_data.update(dict(SegmentationViolet=dict(folder_path="/Users/weian/data/IBL", channel_id=1)))
-    conversion_options.update(dict(SegmentationViolet=dict(plane_segmentation_name="plane_segmentation_isosbestic", stub_test=stub_test)))
+    source_data.update(dict(SegmentationBlue=dict(folder_path=data_dir_path, channel_id=2)))
+    conversion_options.update(
+        dict(SegmentationBlue=dict(plane_segmentation_name="plane_segmentation_calcium", stub_test=stub_test))
+    )
+    source_data.update(dict(SegmentationViolet=dict(folder_path=data_dir_path, channel_id=1)))
+    conversion_options.update(
+        dict(SegmentationViolet=dict(plane_segmentation_name="plane_segmentation_isosbestic", stub_test=stub_test))
+    )
 
     # Add Behavior
     # source_data.update(dict(Behavior=dict()))
     # conversion_options.update(dict(Behavior=dict()))
 
-    converter = Widefield2025NWBConverter(source_data=source_data)
+    converter = WidefieldProcessedNWBConverter(source_data=source_data)
 
     # Add datetime to conversion
     metadata = converter.get_metadata()
@@ -71,4 +98,4 @@ if __name__ == "__main__":
     data_dir_path = Path("/Users/weian/data/IBL")
     output_dir_path = Path("/Users/weian/data/IBL/nwbfiles")
     stub_test = True
-    session_to_nwb(data_dir_path=data_dir_path, output_dir_path=output_dir_path, stub_test=stub_test)
+    processed_imaging_session_to_nwb(data_dir_path=data_dir_path, output_dir_path=output_dir_path, stub_test=stub_test)
