@@ -45,6 +45,11 @@ class WidefieldSegmentationInterface(BaseSegmentationExtractorInterface):
         """Return metadata for this segmentation extractor."""
         metadata = super().get_metadata()
         metadata_copy = deepcopy(metadata)  # To avoid modifying the parent class's metadata
+
+        device_metadata = metadata_copy["Ophys"]["Device"][0]
+        device_name = "widefield_microscope"
+        device_metadata.update(name=device_name)
+
         imaging_plane_metadata = metadata_copy["Ophys"]["ImagingPlane"][0]
         imaging_light_source_properties = self.segmentation_extractor.get_imaging_light_source_properties()
 
@@ -55,6 +60,7 @@ class WidefieldSegmentationInterface(BaseSegmentationExtractorInterface):
             name=f"imaging_plane_{suffix}",
             description=f"The imaging plane for calcium imaging from {color} channel.",
             excitation_lambda=excitation_wavelength,
+            device=device_name,
         )
         optical_channel_metadata = imaging_plane_metadata["optical_channel"][0]
         # Additional metadata would be loaded from yaml
@@ -86,7 +92,7 @@ class WidefieldSegmentationInterface(BaseSegmentationExtractorInterface):
             dff_metadata = metadata_copy["Ophys"]["DfOverF"]
             default_roi_response_dff_metadata = dff_metadata["PlaneSegmentation"]
             default_roi_response_dff_metadata["dff"].update(
-                name=f"roi_response_series_{suffix}",
+                name=f"roi_response_series",
                 description=f"Df/F traces for widefield calcium imaging from {color} channel.",
             )
             dff_metadata.update({plane_segmentation_name: default_roi_response_dff_metadata})
