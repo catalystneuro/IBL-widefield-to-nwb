@@ -1,4 +1,7 @@
 from .behaviorinterface import Widefield2025BehaviorInterface
-from .ibl_widefield_segmentationinterface import WidefieldSegmentationInterface
-from .ibl_widefield_imaginginterface import WidefieldImagingInterface
-from .nwbconverter import Widefield2025NWBConverter
+from .nwbconverter import WidefieldRawNWBConverter
+
+__all__ = [
+    "Widefield2025BehaviorInterface",
+    "WidefieldRawNWBConverter",
+]

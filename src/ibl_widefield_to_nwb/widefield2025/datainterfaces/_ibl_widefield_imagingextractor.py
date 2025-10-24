@@ -1,11 +1,12 @@
 import re
-from typing import Tuple, Optional, Dict, Any
+from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import pandas as pd
 from neuroconv.datainterfaces.behavior.video.video_utils import VideoCaptureContext
 from neuroconv.tools import get_package
 from roiextractors import ImagingExtractor
+
 
 class WidefieldImagingExtractor(ImagingExtractor):
     """A segmentation extractor for IBL Widefield raw imaging data (.mov)."""
@@ -27,7 +28,6 @@ class WidefieldImagingExtractor(ImagingExtractor):
         self.htsv_file_path = str(htsv_file_path)
         self.channel_id = channel_id or 2
 
-
         self._video_capture = VideoCaptureContext
         self._cv2 = get_package(package_name="cv2", installation_instructions="pip install opencv-python-headless")
 
@@ -39,13 +39,13 @@ class WidefieldImagingExtractor(ImagingExtractor):
             raise ValueError(f"No properties found for channel_id '{self.channel_id}'")
 
         # filter for channel_id
-        self._camera_log_metadata = self._camera_log_metadata[self._camera_log_metadata["channel_id"] == str(channel_id)]
+        self._camera_log_metadata = self._camera_log_metadata[
+            self._camera_log_metadata["channel_id"] == str(channel_id)
+        ]
         self._frame_indices = self._camera_log_metadata["frame_id"].astype(int).to_numpy() - 1  # zero indexed
-
 
         suffix = "calcium" if imaging_light_source_properties["wavelength"] == 470 else "isosbestic"
         self._channel_names = [f"optical_channel_{suffix}"]
-
 
     def _get_video_metadata(self) -> dict:
         """Get metadata from the video file using VideoCaptureContext.
@@ -67,15 +67,14 @@ class WidefieldImagingExtractor(ImagingExtractor):
         with open(self.camlog_file_path, "r") as f:
             for line in f:
                 line = line.strip()
-                if line and line.startswith('#LED'):
+                if line and line.startswith("#LED"):
                     # regex match #LED:{channel_id},{frame_id},{timestamp}
                     match = re.match(r"#LED:(?P<channel_id>\d+),(?P<frame_id>\d+),(?P<timestamp>[\d\.]+)", line)
                     if match:
                         camera_log_data.append(match.groupdict())
 
-        camera_log_data = camera_log_data[:self._video_metadata["total_num_samples"]]
+        camera_log_data = camera_log_data[: self._video_metadata["total_num_samples"]]
         return pd.DataFrame.from_dict(camera_log_data)
-
 
     # TODO: replace with loading from ONE API
     def _load_imaging_light_source_properties(self):
@@ -84,9 +83,10 @@ class WidefieldImagingExtractor(ImagingExtractor):
 
     def get_imaging_light_source_properties(self) -> Dict[str, Any]:
         all_imaging_light_source_properties = self._load_imaging_light_source_properties()
-        this_properties = all_imaging_light_source_properties[all_imaging_light_source_properties["LED"] == self.channel_id]
+        this_properties = all_imaging_light_source_properties[
+            all_imaging_light_source_properties["LED"] == self.channel_id
+        ]
         return this_properties.to_dict(orient="records")[0]
-
 
     def get_image_shape(self) -> Tuple[int, int]:
         """Get the shape of the video frame (num_rows, num_columns).
