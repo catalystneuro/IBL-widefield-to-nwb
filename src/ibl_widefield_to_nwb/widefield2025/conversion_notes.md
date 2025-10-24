@@ -43,12 +43,12 @@ The conversion uses `WidefieldProcessedNWBConverter`. For each channel converted
 
 3) Ophys/Fluorescence (ROIResponseSeries for raw/unprocessed fluorescence)
 - For each channel, a ROIResponseSeries named:
-  - `roi_response_series_calcium` for 470 nm
+  - `roi_response_series` for 470 nm
   - `roi_response_series_isosbestic` for 405 nm
 - The uncorrected array (widefieldSVT.uncorrected...) is filtered to the frames that belong to the channel (using imaging.imagingLightSource), then transposed to time x ROI and written with the per-channel timestamps from imaging.times.
 
 4) Ophys/DfOverF (ROIResponseSeries for dF/F)
-- Only for the 470 nm functional channel, a ROIResponseSeries named `roi_response_series_calcium` is created under DfOverF, using the haemodynamically corrected signals from widefieldSVT.haemoCorrected..., filtered to frames for that channel and transposed to time x ROI.
+- Only for the 470 nm functional channel, a ROIResponseSeries named `roi_response_series` is created under DfOverF, using the haemodynamically corrected signals from widefieldSVT.haemoCorrected..., filtered to frames for that channel and transposed to time x ROI.
 
 5) Ophys/SegmentationImages
 - For each channel, the following images are written under the PlaneSegmentation key for that channel:
