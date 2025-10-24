@@ -2,12 +2,15 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Literal
 
-import numpy as np
-from neuroconv.datainterfaces.ophys.baseimagingextractorinterface import BaseImagingExtractorInterface
+from neuroconv.datainterfaces.ophys.baseimagingextractorinterface import (
+    BaseImagingExtractorInterface,
+)
 from neuroconv.utils import DeepDict
 from pydantic import DirectoryPath
 
-from ibl_widefield_to_nwb.widefield2025.ibl_widefield_imagingextractor import WidefieldImagingExtractor
+from ibl_widefield_to_nwb.widefield2025.datainterfaces._ibl_widefield_imagingextractor import (
+    WidefieldImagingExtractor,
+)
 
 
 class WidefieldImagingInterface(BaseImagingExtractorInterface):
@@ -20,11 +23,11 @@ class WidefieldImagingInterface(BaseImagingExtractorInterface):
     Extractor = WidefieldImagingExtractor
 
     def __init__(
-            self,
-            folder_path: DirectoryPath,
-            channel_id: int | None = None,
-            photon_series_type: Literal["OnePhotonSeries", "TwoPhotonSeries"] = "OnePhotonSeries",
-            verbose: bool = False,
+        self,
+        folder_path: DirectoryPath,
+        channel_id: int | None = None,
+        photon_series_type: Literal["OnePhotonSeries", "TwoPhotonSeries"] = "OnePhotonSeries",
+        verbose: bool = False,
     ):
 
         folder_path = Path(folder_path)
@@ -33,21 +36,27 @@ class WidefieldImagingInterface(BaseImagingExtractorInterface):
         if len(movie_file_paths) == 0:
             raise FileNotFoundError(f"No .frames.mov files found in folder: {folder_path}")
         elif len(movie_file_paths) > 1:
-            raise ValueError(f"Multiple .frames.mov files found in folder: {folder_path}. Please ensure only one file is present.")
+            raise ValueError(
+                f"Multiple .frames.mov files found in folder: {folder_path}. Please ensure only one file is present."
+            )
         movie_file_path = str(movie_file_paths[0])
 
         htsv_file_paths = list(folder_path.glob("*.htsv"))
         if len(htsv_file_paths) == 0:
             raise FileNotFoundError(f"No .htsv files found in folder: {folder_path}")
         elif len(htsv_file_paths) > 1:
-            raise ValueError(f"Multiple .htsv files found in folder: {folder_path}. Please ensure only one file is present.")
+            raise ValueError(
+                f"Multiple .htsv files found in folder: {folder_path}. Please ensure only one file is present."
+            )
         htsv_file_path = str(htsv_file_paths[0])
 
         camlog_file_paths = list(folder_path.glob("*.camlog"))
         if len(camlog_file_paths) == 0:
             raise FileNotFoundError(f"No .camlog files found in folder: {folder_path}")
         elif len(camlog_file_paths) > 1:
-            raise ValueError(f"Multiple .camlog files found in folder: {folder_path}. Please ensure only one file is present.")
+            raise ValueError(
+                f"Multiple .camlog files found in folder: {folder_path}. Please ensure only one file is present."
+            )
         camlog_file_path = str(camlog_file_paths[0])
 
         super().__init__(
