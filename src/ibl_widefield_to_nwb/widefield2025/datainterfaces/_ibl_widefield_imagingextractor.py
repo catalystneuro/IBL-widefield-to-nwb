@@ -13,7 +13,9 @@ class WidefieldImagingExtractor(ImagingExtractor):
 
     extractor_name = "WidefieldImagingExtractor"
 
-    def __init__(self, file_path: str, htsv_file_path: str, camlog_file_path: str, channel_id: Optional[int] = None):
+    def __init__(
+        self, file_path: str, htsv_file_path: str, camlog_file_path: str, excitation_wavelength_nm: Optional[int] = None
+    ):
         """Initialize a WidefieldImagingExtractor instance.
 
         Main class for extracting raw imaging data from .mov format.
@@ -26,7 +28,7 @@ class WidefieldImagingExtractor(ImagingExtractor):
         super().__init__()
         self.file_path = str(file_path)
         self.htsv_file_path = str(htsv_file_path)
-        self.channel_id = channel_id or 2
+        self.excitation_wavelength_nm = excitation_wavelength_nm or 470  # default to 470 nm if not provided
 
         self._video_capture = VideoCaptureContext
         self._cv2 = get_package(package_name="cv2", installation_instructions="pip install opencv-python-headless")
@@ -35,8 +37,9 @@ class WidefieldImagingExtractor(ImagingExtractor):
         self.camlog_file_path = camlog_file_path
         self._camera_log_metadata = self._get_camera_log_metadata()
         imaging_light_source_properties = self.get_imaging_light_source_properties()
+        channel_id = imaging_light_source_properties["LED"]
         if len(imaging_light_source_properties) == 0:
-            raise ValueError(f"No properties found for channel_id '{self.channel_id}'")
+            raise ValueError(f"No properties found for channel_id '{channel_id}'")
 
         # filter for channel_id
         self._camera_log_metadata = self._camera_log_metadata[
@@ -44,7 +47,7 @@ class WidefieldImagingExtractor(ImagingExtractor):
         ]
         self._frame_indices = self._camera_log_metadata["frame_id"].astype(int).to_numpy() - 1  # zero indexed
 
-        suffix = "calcium" if imaging_light_source_properties["wavelength"] == 470 else "isosbestic"
+        suffix = "calcium" if excitation_wavelength_nm == 470 else "isosbestic"
         self._channel_names = [f"optical_channel_{suffix}"]
 
     def _get_video_metadata(self) -> dict:
@@ -84,7 +87,7 @@ class WidefieldImagingExtractor(ImagingExtractor):
     def get_imaging_light_source_properties(self) -> Dict[str, Any]:
         all_imaging_light_source_properties = self._load_imaging_light_source_properties()
         this_properties = all_imaging_light_source_properties[
-            all_imaging_light_source_properties["LED"] == self.channel_id
+            all_imaging_light_source_properties["wavelength"] == self.excitation_wavelength_nm
         ]
         return this_properties.to_dict(orient="records")[0]
 
