@@ -1,15 +1,38 @@
 """Primary script to run to convert an entire session for of data using the NWBConverter."""
-from pathlib import Path
-from typing import Union
+
 import datetime
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from neuroconv.utils import load_dict_from_file, dict_deep_update
+from neuroconv.utils import dict_deep_update, load_dict_from_file
 
-from ibl_widefield_to_nwb.widefield2025 import Widefield2025NWBConverter
+from ibl_widefield_to_nwb.widefield2025 import WidefieldRawNWBConverter
 
 
-def session_to_nwb(data_dir_path: Union[str, Path], output_dir_path: Union[str, Path], stub_test: bool = False):
+def raw_imaging_session_to_nwb(
+    data_dir_path: str | Path,
+    functional_channel_id: int,
+    isosbestic_channel_id: int,
+    output_dir_path: str | Path,
+    stub_test: bool = False,
+):
+    """
+    Convert a single session of widefield raw imaging data to NWB format.
+
+    Parameters
+    ----------
+    data_dir_path: str or Path
+        Path to the directory containing the raw widefield data for the session.
+    output_dir_path: str or Path
+        Path to the directory where the output NWB file will be saved.
+    functional_channel_id: int
+        Channel ID for the functional (calcium) imaging data.
+    isosbestic_channel_id: int
+        Channel ID for the isosbestic imaging data.
+    stub_test: bool, default: False
+        If True, run a stub test (process a small subset of the data for testing purposes).
+
+    """
 
     data_dir_path = Path(data_dir_path)
     output_dir_path = Path(output_dir_path)
@@ -24,16 +47,34 @@ def session_to_nwb(data_dir_path: Union[str, Path], output_dir_path: Union[str, 
     conversion_options = dict()
 
     # Add Imaging
-    source_data.update(dict(ImagingBlue=dict(folder_path=data_dir_path / "raw_widefield_data", channel_id=3)))
-    conversion_options.update(dict(ImagingBlue=dict(photon_series_type="OnePhotonSeries", photon_series_index=0, stub_test=stub_test, iterator_options=dict(display_progress=True))))
-    source_data.update(dict(ImagingViolet=dict(folder_path=data_dir_path / "raw_widefield_data", channel_id=2)))
-    conversion_options.update(dict(ImagingViolet=dict(photon_series_type="OnePhotonSeries", photon_series_index=1, stub_test=stub_test, iterator_options=dict(display_progress=True))))
+    source_data.update(dict(ImagingBlue=dict(folder_path=data_dir_path, channel_id=functional_channel_id)))
+    conversion_options.update(
+        dict(
+            ImagingBlue=dict(
+                photon_series_type="OnePhotonSeries",
+                photon_series_index=0,
+                stub_test=stub_test,
+                iterator_options=dict(display_progress=True),
+            )
+        )
+    )
+    source_data.update(dict(ImagingViolet=dict(folder_path=data_dir_path, channel_id=isosbestic_channel_id)))
+    conversion_options.update(
+        dict(
+            ImagingViolet=dict(
+                photon_series_type="OnePhotonSeries",
+                photon_series_index=1,
+                stub_test=stub_test,
+                iterator_options=dict(display_progress=True),
+            )
+        )
+    )
 
     # Add Behavior
-    source_data.update(dict(Behavior=dict()))
-    conversion_options.update(dict(Behavior=dict()))
+    # source_data.update(dict(Behavior=dict()))
+    # conversion_options.update(dict(Behavior=dict()))
 
-    converter = Widefield2025NWBConverter(source_data=source_data)
+    converter = WidefieldRawNWBConverter(source_data=source_data)
 
     # Add datetime to conversion
     metadata = converter.get_metadata()
@@ -59,7 +100,17 @@ def session_to_nwb(data_dir_path: Union[str, Path], output_dir_path: Union[str, 
 if __name__ == "__main__":
 
     # Parameters for conversion
-    data_dir_path = Path("/Users/weian/data/IBL")
+    data_dir_path = Path("/Users/weian/data/IBL/raw_widefield_data")
     output_dir_path = Path("/Volumes/T9/data/IBL")
+
+    functional_channel_id = 3  # The channel ID for functional (calcium) imaging
+    isosbestic_channel_id = 2  # The channel ID for isosbestic imaging
+
     stub_test = True
-    session_to_nwb(data_dir_path=data_dir_path, output_dir_path=output_dir_path, stub_test=stub_test)
+    raw_imaging_session_to_nwb(
+        data_dir_path=data_dir_path,
+        output_dir_path=output_dir_path,
+        functional_channel_id=functional_channel_id,
+        isosbestic_channel_id=isosbestic_channel_id,
+        stub_test=stub_test,
+    )
