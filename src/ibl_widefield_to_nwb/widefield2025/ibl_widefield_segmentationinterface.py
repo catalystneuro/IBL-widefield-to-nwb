@@ -1,11 +1,15 @@
 from copy import deepcopy
 
 import numpy as np
-from neuroconv.datainterfaces.ophys.basesegmentationextractorinterface import BaseSegmentationExtractorInterface
+from neuroconv.datainterfaces.ophys.basesegmentationextractorinterface import (
+    BaseSegmentationExtractorInterface,
+)
 from neuroconv.utils import DeepDict
 from pydantic import DirectoryPath
 
-from src.ibl_widefield_to_nwb.widefield2025.ibl_widefield_segmentationextractor import WidefieldSegmentationExtractor
+from src.ibl_widefield_to_nwb.widefield2025.ibl_widefield_segmentationextractor import (
+    WidefieldSegmentationExtractor,
+)
 
 
 class WidefieldSegmentationInterface(BaseSegmentationExtractorInterface):
@@ -61,7 +65,7 @@ class WidefieldSegmentationInterface(BaseSegmentationExtractorInterface):
         )
 
         image_segmentation_metadata = metadata_copy["Ophys"]["ImageSegmentation"]
-        plane_segmentations_metadata = image_segmentation_metadata['plane_segmentations'][0]
+        plane_segmentations_metadata = image_segmentation_metadata["plane_segmentations"][0]
         plane_segmentation_name = f"plane_segmentation_{suffix}"
         plane_segmentations_metadata.update(
             name=plane_segmentation_name,
@@ -75,30 +79,26 @@ class WidefieldSegmentationInterface(BaseSegmentationExtractorInterface):
             name=f"roi_response_series_{suffix}",
             description=f"Raw fluorescence traces for widefield calcium imaging from {color} channel.",
         )
-        fluorescence_metadata.update(
-            {plane_segmentation_name: default_roi_response_raw_metadata}
-        )
+        fluorescence_metadata.update({plane_segmentation_name: default_roi_response_raw_metadata})
 
         # Only update for functional channel
         if excitation_wavelength == 470.0:
             dff_metadata = metadata_copy["Ophys"]["DfOverF"]
             default_roi_response_dff_metadata = dff_metadata["PlaneSegmentation"]
             default_roi_response_dff_metadata["dff"].update(
-                name="roi_response_series",
+                name=f"roi_response_series_{suffix}",
                 description=f"Df/F traces for widefield calcium imaging from {color} channel.",
             )
-            dff_metadata.update(
-                {plane_segmentation_name: default_roi_response_dff_metadata}
-            )
+            dff_metadata.update({plane_segmentation_name: default_roi_response_dff_metadata})
 
         segmentation_images_metadata = metadata_copy["Ophys"]["SegmentationImages"]
         default_image_masks_metadata = segmentation_images_metadata["PlaneSegmentation"]
-        default_image_masks_metadata.update(mean=dict(
-            name=f"mean_{suffix}",
-            description=f"Mean image for widefield calcium imaging from {color} channel.",
-        ))
-        segmentation_images_metadata.update(
-            {plane_segmentation_name: default_image_masks_metadata}
+        default_image_masks_metadata.update(
+            mean=dict(
+                name=f"mean_{suffix}",
+                description=f"Mean image for widefield calcium imaging from {color} channel.",
+            )
         )
+        segmentation_images_metadata.update({plane_segmentation_name: default_image_masks_metadata})
 
         return metadata_copy
