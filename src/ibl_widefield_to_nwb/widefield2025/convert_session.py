@@ -10,10 +10,10 @@ from ibl_widefield_to_nwb.widefield2025 import WidefieldProcessedNWBConverter
 
 
 def processed_imaging_session_to_nwb(
-    data_dir_path: str | Path,
+    processed_data_dir_path: str | Path,
     output_dir_path: str | Path,
-    functional_channel_id: int,
-    isosbestic_channel_id: int,
+    functional_wavelength_nm: int,
+    isosbestic_wavelength_nm: int,
     stub_test: bool = False,
 ):
     """
@@ -21,30 +21,30 @@ def processed_imaging_session_to_nwb(
 
     Expected file structure:
     data_dir_path/
-      ├── imaging.imagingLightSource.afbbadcd-be70-410b-becf-db547c6a9d78.npy
-      ├── imaging.times.9f634c9e-33ba-4386-993a-e386fe909397.npy
-      ├── imagingLightSource.properties.3e8acb33-0cee-4ba9-8ad4-5b305b74fee0.htsv
-      ├── widefieldChannels.frameAverage.4b030254-be6d-4e8a-bf40-8316df71b710.npy
-      ├── widefieldSVT.haemoCorrected.fb72c7a7-6165-4931-9d6e-3600b26ea525.npy
-      ├── widefieldSVT.uncorrected.54b4c57c-b25c-4eb9-9d0f-76654d84a005.npy
-      └── widefieldU.images.75628fe6-1c05-4a62-96c9-0478ebfa42b0.npy
+      ├── imaging.imagingLightSource.npy
+      ├── imaging.times.npy
+      ├── imagingLightSource.properties.htsv
+      ├── widefieldChannels.frameAverage.npy
+      ├── widefieldSVT.haemoCorrected.npy
+      ├── widefieldSVT.uncorrected.npy
+      └── widefieldU.images.npy
 
     Parameters
     ----------
-    data_dir_path: str | Path
+    processed_data_dir_path: str | Path
         Path to the directory containing the processed widefield imaging data.
     output_dir_path: str | Path
         Path to the directory where the NWB file will be saved.
-    functional_channel_id: int
-        The channel ID for the functional (e.g., calcium) imaging data.
-    isosbestic_channel_id: int
-        The channel ID for the isosbestic imaging data.
+    functional_wavelength_nm: int
+        Wavelength (in nm) for the functional imaging data.
+    isosbestic_wavelength_nm: int
+        Wavelength (in nm) for the isosbestic imaging data.
     stub_test: bool, default: False
         Whether to run a stub test (process a smaller subset of data for testing purposes).
 
     """
 
-    data_dir_path = Path(data_dir_path)
+    processed_data_dir_path = Path(processed_data_dir_path)
     output_dir_path = Path(output_dir_path)
     if stub_test:
         output_dir_path = output_dir_path / "nwb_stub"
@@ -57,11 +57,23 @@ def processed_imaging_session_to_nwb(
     conversion_options = dict()
 
     # Add Segmentation
-    source_data.update(dict(SegmentationBlue=dict(folder_path=data_dir_path, channel_id=functional_channel_id)))
+    source_data.update(
+        dict(
+            SegmentationBlue=dict(
+                folder_path=processed_data_dir_path, excitation_wavelength_nm=functional_wavelength_nm
+            )
+        )
+    )
     conversion_options.update(
         dict(SegmentationBlue=dict(plane_segmentation_name="plane_segmentation_calcium", stub_test=stub_test))
     )
-    source_data.update(dict(SegmentationViolet=dict(folder_path=data_dir_path, channel_id=isosbestic_channel_id)))
+    source_data.update(
+        dict(
+            SegmentationViolet=dict(
+                folder_path=processed_data_dir_path, excitation_wavelength_nm=isosbestic_wavelength_nm
+            )
+        )
+    )
     conversion_options.update(
         dict(SegmentationViolet=dict(plane_segmentation_name="plane_segmentation_isosbestic", stub_test=stub_test))
     )
@@ -101,16 +113,17 @@ def processed_imaging_session_to_nwb(
 if __name__ == "__main__":
 
     # Parameters for conversion
-    data_dir_path = Path("/Users/weian/data/IBL")
+    processed_data_dir_path = Path("/Users/weian/data/IBL/alf/widefield")
     output_dir_path = Path("/Users/weian/data/IBL/nwbfiles")
 
-    functional_channel_id = 2  # channel ID for functional imaging
-    isosbestic_channel_id = 1  # channel ID for isosbestic imaging
+    functional_wavelength_nm = 470  # The wavelength for functional imaging (e.g. 470 nm)
+    isosbestic_wavelength_nm = 405  # The wavelength for isosbestic imaging (e.g. 405 nm)
+
     stub_test = True
     processed_imaging_session_to_nwb(
-        data_dir_path=data_dir_path,
+        processed_data_dir_path=processed_data_dir_path,
         output_dir_path=output_dir_path,
-        functional_channel_id=functional_channel_id,
-        isosbestic_channel_id=isosbestic_channel_id,
+        functional_wavelength_nm=functional_wavelength_nm,
+        isosbestic_wavelength_nm=isosbestic_wavelength_nm,
         stub_test=stub_test,
     )
