@@ -25,7 +25,7 @@ class WidefieldImagingInterface(BaseImagingExtractorInterface):
     def __init__(
         self,
         folder_path: DirectoryPath,
-        channel_id: int | None = None,
+        excitation_wavelength_nm: int | None = None,
         photon_series_type: Literal["OnePhotonSeries", "TwoPhotonSeries"] = "OnePhotonSeries",
         verbose: bool = False,
     ):
@@ -63,7 +63,7 @@ class WidefieldImagingInterface(BaseImagingExtractorInterface):
             file_path=movie_file_path,
             htsv_file_path=htsv_file_path,
             camlog_file_path=camlog_file_path,
-            channel_id=channel_id,
+            excitation_wavelength_nm=excitation_wavelength_nm,
             photon_series_type=photon_series_type,
             verbose=verbose,
         )
@@ -82,9 +82,7 @@ class WidefieldImagingInterface(BaseImagingExtractorInterface):
         metadata_copy = deepcopy(metadata)  # To avoid modifying the parent class's metadata
         imaging_plane_metadata = metadata_copy["Ophys"]["ImagingPlane"][0]
 
-        imaging_light_source_properties = self.imaging_extractor.get_imaging_light_source_properties()
-
-        excitation_wavelength = float(imaging_light_source_properties["wavelength"])
+        excitation_wavelength = float(self.source_data["excitation_wavelength_nm"])
         suffix = "calcium" if excitation_wavelength == 470.0 else "isosbestic"
         imaging_plane_metadata.update(
             name=f"imaging_plane_{suffix}",
