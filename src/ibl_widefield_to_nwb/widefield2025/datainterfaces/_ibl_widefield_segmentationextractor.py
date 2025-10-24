@@ -1,6 +1,5 @@
 from pathlib import Path
 from typing import Any, Dict, Optional
-from warnings import warn
 
 import numpy as np
 import pandas as pd
@@ -13,80 +12,38 @@ class WidefieldSegmentationExtractor(SegmentationExtractor):
 
     extractor_name = "WidefieldSegmentationExtractor"
 
-    @classmethod
-    def get_available_channels(cls, folder_path: DirectoryPath) -> list[int]:
-        """Get the available channel ids from the ...
-
-        Parameters
-        ----------
-        folder_path : PathType
-            Path to  output path.
-
-        Returns
-        -------
-        channel_names: list
-            List of channel names.
-        """
-
-        available_channels = cls._load_imaging_light_source(folder_path=folder_path)
-        channel_ids = np.unique(available_channels).tolist()
-
-        return channel_ids
-
-    # TODO: replace this with ONE API
-    @classmethod
-    def _load_imaging_light_source(cls, folder_path: DirectoryPath) -> np.ndarray:
-        file_name = "imaging.imagingLightSource.afbbadcd-be70-410b-becf-db547c6a9d78.npy"
-        return np.load(Path(folder_path) / file_name, allow_pickle=True)
-
-    def __init__(self, folder_path: DirectoryPath, channel_id: Optional[int] = None):
+    def __init__(self, folder_path: DirectoryPath, excitation_wavelength_nm: int):
         """Initialize a WidefieldSegmentationExtractor instance.
 
         Main class for extracting segmentation data from .npy format.
 
         Expected file structure:
         folder_path/
-            ├── imaging.imagingLightSource.afbbadcd-be70-410b-becf-db547c6a9d78.npy
-            ├── imaging.times.9f634c9e-33ba-4386-993a-e386fe909397.npy
-            ├── imagingLightSource.properties.3e8acb33-0cee-4ba9-8ad4-5b305b74fee0.htsv
-            ├── widefieldChannels.frameAverage.4b030254-be6d-4e8a-bf40-8316df71b710.npy
-            ├── widefieldSVT.haemoCorrected.fb72c7a7-6165-4931-9d6e-3600b26ea525.npy
-            ├── widefieldSVT.uncorrected.54b4c57c-b25c-4eb9-9d0f-76654d84a005.npy
-            └── widefieldU.images.75628fe6-1c05-4a62-96c9-0478ebfa42b0.npy
+            ├── imaging.imagingLightSource.npy
+            ├── imaging.times.npy
+            ├── imagingLightSource.properties.htsv
+            ├── widefieldChannels.frameAverage.npy
+            ├── widefieldSVT.haemoCorrected.npy
+            ├── widefieldSVT.uncorrected.npy
+            └── widefieldU.images.npy
 
         Parameters
         ----------
         folder_path: str or Path
             Path to the folder containing segmentation data files.
-        channel_id: int, optional
-            The identifier of the channel to load.
+        excitation_wavelength_nm: int
+            The excitation wavelength (in nm) for the channel to load.
         """
         super().__init__()
         self.folder_path = Path(folder_path)
 
-        channel_ids = self.get_available_channels(folder_path=folder_path)
-        num_channels = len(channel_ids)
-        if channel_id is None:
-            if num_channels > 1:
-                warn(
-                    "More than one channel is detected! Please specify which channel you wish to load with the `channel_id` argument. "
-                    "To see what channels are available, call `WidefieldSegmentationExtractor.get_available_channels(folder_path=...)`.",
-                    UserWarning,
-                )
-            channel_id = channel_ids[0]
-
-        self.channel_id = channel_id
-        if self.channel_id not in channel_ids:
-            raise ValueError(
-                f"The selected channel '{channel_id}' is not a valid channel id. To see what channels are available, "
-                f"call `WidefieldSegmentationExtractor.get_available_channels(folder_path=...)`."
-            )
+        self.excitation_wavelength_nm = excitation_wavelength_nm
 
         imaging_light_source_properties = self.get_imaging_light_source_properties()
         if len(imaging_light_source_properties) == 0:
-            raise ValueError(f"No properties found for channel_id '{self.channel_id}'")
-
-        suffix = "calcium" if imaging_light_source_properties["wavelength"] == 470 else "isosbestic"
+            raise ValueError(f"No properties found for excitation wavelength '{self.excitation_wavelength_nm}' nm.")
+        self.channel_id = imaging_light_source_properties["channel_id"]
+        suffix = "calcium" if excitation_wavelength_nm == 470 else "isosbestic"
         self._channel_names = [f"optical_channel_{suffix}"]
 
         # This is available for both channels
@@ -119,41 +76,45 @@ class WidefieldSegmentationExtractor(SegmentationExtractor):
 
     # TODO: replace with loading from ONE API
     def _load_times(self) -> np.ndarray:
-        times_file_name = "imaging.times.9f634c9e-33ba-4386-993a-e386fe909397.npy"
+        times_file_name = "imaging.times.npy"
         all_imaging_times = np.load(self.folder_path / times_file_name)
         return all_imaging_times
 
     # TODO: replace with loading from ONE API
     def _load_imaging_light_source_properties(self) -> pd.DataFrame:
-        file_name = "imagingLightSource.properties.3e8acb33-0cee-4ba9-8ad4-5b305b74fee0.htsv"
+        file_name = "imagingLightSource.properties.htsv"
         all_imaging_light_source_properties = pd.read_csv(self.folder_path / file_name)
         return all_imaging_light_source_properties
 
     # TODO: replace with loading from ONE API
     def _load_roi_response_raw(self) -> np.ndarray:
-        file_name = "widefieldSVT.uncorrected.54b4c57c-b25c-4eb9-9d0f-76654d84a005.npy"
+        file_name = "widefieldSVT.uncorrected.npy"
         all_roi_response_raw = np.load(self.folder_path / file_name)
         return all_roi_response_raw
 
     def _load_roi_response_dff(self) -> np.ndarray:
-        file_name = "widefieldSVT.haemoCorrected.fb72c7a7-6165-4931-9d6e-3600b26ea525.npy"
+        file_name = "widefieldSVT.haemoCorrected.npy"
         all_roi_response_dff = np.load(self.folder_path / file_name)
         return all_roi_response_dff
 
     def _load_mean_image(self):
-        file_name = "widefieldChannels.frameAverage.4b030254-be6d-4e8a-bf40-8316df71b710.npy"
+        file_name = "widefieldChannels.frameAverage.npy"
         all_mean_image = np.load(self.folder_path / file_name)
         return all_mean_image
 
     def _load_images(self):
-        file_name = "widefieldU.images.75628fe6-1c05-4a62-96c9-0478ebfa42b0.npy"
+        file_name = "widefieldU.images.npy"
         all_images = np.load(self.folder_path / file_name)
         return all_images
+
+    def _load_imaging_light_source(self) -> np.ndarray:
+        file_name = "imaging.imagingLightSource.npy"
+        return np.load(self.folder_path / file_name, allow_pickle=True)
 
     def get_imaging_light_source_properties(self) -> Dict[str, Any]:
         all_imaging_light_source_properties = self._load_imaging_light_source_properties()
         this_properties = all_imaging_light_source_properties[
-            all_imaging_light_source_properties["channel_id"] == self.channel_id
+            all_imaging_light_source_properties["wavelength"] == self.excitation_wavelength_nm
         ]
         return this_properties.to_dict(orient="records")[0]
 
@@ -165,7 +126,7 @@ class WidefieldSegmentationExtractor(SegmentationExtractor):
         imaging_indices: np.ndarray
             1-D array of imaging indices.
         """
-        light_sources = self._load_imaging_light_source(folder_path=self.folder_path)
+        light_sources = self._load_imaging_light_source()
         imaging_indices = np.where(light_sources == self.channel_id)[0]
         return imaging_indices
 
@@ -216,9 +177,9 @@ class WidefieldSegmentationExtractor(SegmentationExtractor):
         timestamps : np.ndarray or None
             The original timestamps in seconds, or None if not available.
         """
-        times_file_name = "imaging.times.9f634c9e-33ba-4386-993a-e386fe909397.npy"
+        times_file_name = "imaging.times.npy"
         all_times = np.load(self.folder_path / times_file_name)
-        light_source_file_name = "imaging.imagingLightSource.afbbadcd-be70-410b-becf-db547c6a9d78.npy"
+        light_source_file_name = "imaging.imagingLightSource.npy"
 
         light_sources = np.load(self.folder_path / light_source_file_name)
         native_timestamps = all_times[light_sources == self.channel_id]

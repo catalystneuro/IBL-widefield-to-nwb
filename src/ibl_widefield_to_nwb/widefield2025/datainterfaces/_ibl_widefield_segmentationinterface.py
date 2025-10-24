@@ -24,7 +24,7 @@ class WidefieldSegmentationInterface(BaseSegmentationExtractorInterface):
     def __init__(
         self,
         folder_path: DirectoryPath,
-        channel_id: int | None = None,
+        excitation_wavelength_nm: int,
         verbose: bool = False,
     ):
         """
@@ -33,13 +33,13 @@ class WidefieldSegmentationInterface(BaseSegmentationExtractorInterface):
         ----------
         folder_path : DirectoryPath
             Path to the folder containing the segmentation data.
-        channel_id : int, optional
-            Specific channel ID to extract. If None, all channels are extracted.
+        excitation_wavelength_nm : int
+            The excitation wavelength (in nm) for the channel to load.
         verbose : bool, default : False
             Whether to print verbose output.
         """
         self.verbose = verbose
-        super().__init__(folder_path=folder_path, channel_id=channel_id)
+        super().__init__(folder_path=folder_path, excitation_wavelength_nm=excitation_wavelength_nm)
 
     def get_metadata(self) -> DeepDict:
         """Return metadata for this segmentation extractor."""
@@ -49,7 +49,7 @@ class WidefieldSegmentationInterface(BaseSegmentationExtractorInterface):
         imaging_light_source_properties = self.segmentation_extractor.get_imaging_light_source_properties()
 
         color = imaging_light_source_properties["color"]
-        excitation_wavelength = float(imaging_light_source_properties["wavelength"])
+        excitation_wavelength = float(self.source_data["excitation_wavelength_nm"])
         suffix = "calcium" if excitation_wavelength == 470.0 else "isosbestic"
         imaging_plane_metadata.update(
             name=f"imaging_plane_{suffix}",
