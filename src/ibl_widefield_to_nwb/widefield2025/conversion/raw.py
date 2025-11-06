@@ -14,8 +14,8 @@ from ibl_widefield_to_nwb.widefield2025.conversion import build_frame_cache
 def convert_raw_session(
     data_dir_path: str | Path,
     cache_dir_path: str | Path,
-    functional_channel_id: int,
-    isosbestic_channel_id: int,
+    functional_wavelength_nm: int,
+    isosbestic_wavelength_nm: int,
     output_dir_path: str | Path,
     force_cache: bool = False,
     stub_test: bool = False,
@@ -31,10 +31,10 @@ def convert_raw_session(
         Path to the directory for caching intermediate data.
     output_dir_path: str or Path
         Path to the directory where the output NWB file will be saved.
-    functional_channel_id: int
-        Channel ID for the functional (calcium) imaging data.
-    isosbestic_channel_id: int
-        Channel ID for the isosbestic imaging data.
+    functional_wavelength_nm: int
+        Wavelength (in nm) for the functional (calcium) imaging data.
+    isosbestic_wavelength_nm: int
+        Wavelength (in nm) for the isosbestic imaging data.
     force_cache: bool, default: False
         If True, force rebuilding of the cache even if it already exists.
     stub_test: bool, default: False
@@ -73,7 +73,9 @@ def convert_raw_session(
     source_data.update(
         dict(
             ImagingBlue=dict(
-                folder_path=data_dir_path, cache_folder_path=cache_dir_path, channel_id=functional_channel_id
+                folder_path=data_dir_path,
+                cache_folder_path=cache_dir_path,
+                excitation_wavelength_nm=functional_wavelength_nm,
             )
         )
     )
@@ -93,7 +95,9 @@ def convert_raw_session(
     source_data.update(
         dict(
             ImagingViolet=dict(
-                folder_path=data_dir_path, cache_folder_path=cache_dir_path, channel_id=isosbestic_channel_id
+                folder_path=data_dir_path,
+                cache_folder_path=cache_dir_path,
+                excitation_wavelength_nm=isosbestic_wavelength_nm,
             )
         )
     )

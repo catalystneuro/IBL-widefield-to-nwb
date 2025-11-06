@@ -2,12 +2,14 @@
 
 from pathlib import Path
 
+from ibl_widefield_to_nwb.widefield2025.conversion import convert_raw_session
+
 
 def session_to_nwb(
     data_dir_path: str | Path,
     cache_dir_path: str | Path,
-    functional_channel_id: int,
-    isosbestic_channel_id: int,
+    functional_wavelength_nm: int,
+    isosbestic_wavelength_nm: int,
     output_dir_path: str | Path,
     mode: str = "raw",
     force_cache: bool = False,
@@ -24,10 +26,10 @@ def session_to_nwb(
         Path to the directory for caching intermediate data.
     output_dir_path: str or Path
         Path to the directory where the output NWB file will be saved.
-    functional_channel_id: int
-        Channel ID for the functional (calcium) imaging data.
-    isosbestic_channel_id: int
-        Channel ID for the isosbestic imaging data.
+    functional_wavelength_nm: int
+        Wavelength (in nm) for the functional imaging data.
+    isosbestic_wavelength_nm: int
+        Wavelength (in nm) for the isosbestic imaging data.
     force_cache: bool, default: False
         If True, force rebuilding of the cache even if it already exists.
     stub_test: bool, default: False
@@ -37,15 +39,11 @@ def session_to_nwb(
 
     match mode:
         case "raw":
-            from ibl_widefield_to_nwb.widefield2025.conversion import (
-                convert_raw_session,
-            )
-
             nwbfile_path = convert_raw_session(
                 data_dir_path=data_dir_path,
                 cache_dir_path=cache_dir_path,
-                functional_channel_id=functional_channel_id,
-                isosbestic_channel_id=isosbestic_channel_id,
+                functional_wavelength_nm=functional_wavelength_nm,
+                isosbestic_wavelength_nm=isosbestic_wavelength_nm,
                 output_dir_path=output_dir_path,
                 force_cache=force_cache,
                 stub_test=stub_test,
@@ -59,8 +57,8 @@ if __name__ == "__main__":
     cache_dir_path = data_dir_path / "cache_test"
     output_dir_path = Path("/Volumes/T9/data/IBL")
 
-    functional_channel_id = 3  # The channel ID for functional (calcium) imaging
-    isosbestic_channel_id = 2  # The channel ID for isosbestic imaging
+    functional_wavelength_nm = 470  # The wavelength for functional imaging (e.g. 470 nm)
+    isosbestic_wavelength_nm = 405  # The wavelength for isosbestic imaging (e.g. 405 nm)
 
     stub_test = False  # Set to True for quick testing with limited data
     session_to_nwb(
@@ -68,7 +66,7 @@ if __name__ == "__main__":
         data_dir_path=data_dir_path,
         cache_dir_path=cache_dir_path,
         output_dir_path=output_dir_path,
-        functional_channel_id=functional_channel_id,
-        isosbestic_channel_id=isosbestic_channel_id,
+        functional_wavelength_nm=functional_wavelength_nm,
+        isosbestic_wavelength_nm=isosbestic_wavelength_nm,
         stub_test=stub_test,
     )
