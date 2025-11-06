@@ -6,8 +6,9 @@ from ibl_widefield_to_nwb.widefield2025.conversion import convert_raw_session
 
 
 def session_to_nwb(
-    data_dir_path: str | Path,
+    raw_data_dir_path: str | Path,
     cache_dir_path: str | Path,
+    processed_data_dir_path: str | Path,
     functional_wavelength_nm: int,
     isosbestic_wavelength_nm: int,
     output_dir_path: str | Path,
@@ -20,10 +21,12 @@ def session_to_nwb(
 
     Parameters
     ----------
-    data_dir_path: str or Path
+    raw_data_dir_path: str or Path
         Path to the directory containing the raw widefield data for the session.
     cache_dir_path: str or Path
         Path to the directory for caching intermediate data.
+    processed_data_dir_path: str or Path
+        Path to the directory containing processed data.
     output_dir_path: str or Path
         Path to the directory where the output NWB file will be saved.
     functional_wavelength_nm: int
@@ -40,8 +43,9 @@ def session_to_nwb(
     match mode:
         case "raw":
             nwbfile_path = convert_raw_session(
-                data_dir_path=data_dir_path,
+                raw_data_dir_path=raw_data_dir_path,
                 cache_dir_path=cache_dir_path,
+                processed_data_dir_path=processed_data_dir_path,
                 functional_wavelength_nm=functional_wavelength_nm,
                 isosbestic_wavelength_nm=isosbestic_wavelength_nm,
                 output_dir_path=output_dir_path,
@@ -53,8 +57,9 @@ def session_to_nwb(
 if __name__ == "__main__":
 
     # Parameters for conversion
-    data_dir_path = Path("/Users/weian/data/IBL/raw_widefield_data")
-    cache_dir_path = data_dir_path / "cache_test"
+    raw_data_dir_path = Path("/Users/weian/data/IBL/raw_widefield_data")
+    cache_dir_path = raw_data_dir_path / "cache_test"
+    processed_data_dir_path = Path("/Users/weian/data/IBL/alf/widefield")
     output_dir_path = Path("/Volumes/T9/data/IBL")
 
     functional_wavelength_nm = 470  # The wavelength for functional imaging (e.g. 470 nm)
@@ -63,8 +68,9 @@ if __name__ == "__main__":
     stub_test = False  # Set to True for quick testing with limited data
     session_to_nwb(
         mode="raw",
-        data_dir_path=data_dir_path,
+        raw_data_dir_path=raw_data_dir_path,
         cache_dir_path=cache_dir_path,
+        processed_data_dir_path=processed_data_dir_path,
         output_dir_path=output_dir_path,
         functional_wavelength_nm=functional_wavelength_nm,
         isosbestic_wavelength_nm=isosbestic_wavelength_nm,
