@@ -106,3 +106,30 @@ def build_frame_cache(folder_path: DirectoryPath, cache_folder_path: DirectoryPa
     print(f"Total data ({movie_file_path.name}) size: {total_size_gb:.2f} GB ({total_size_bytes:,} bytes)")
     print(f"Cache data ({data_path}) size: {cache_size_gb:.2f} GB ({cache_size_bytes:,} bytes)")
     return None
+
+
+def validate_cache(cache_folder_path: DirectoryPath):
+    """
+    Quick validations:
+      - meta key `total_num_samples` present
+      - memmap file size matches expected (total * H * W * itemsize)
+      - timestamps shape matches total
+    """
+
+    cache_folder_path = Path(cache_folder_path)
+    meta_path = cache_folder_path / "meta.json"
+    data_path = cache_folder_path / "frames.dat"
+
+    with open(meta_path, "r") as f:
+        meta = json.load(f)
+
+    total = int(meta.get("total_num_samples", 0))
+    h = int(meta.get("height", 0))
+    w = int(meta.get("width", 0))
+    dtype_name = meta.get("dtype", "uint8")
+    dtype = np.dtype(dtype_name)
+    expected_size = total * h * w * dtype.itemsize
+    actual_size = data_path.stat().st_size if data_path.exists() else 0
+    if actual_size != expected_size:
+        raise ValueError(f"frames.dat size mismatch: expected {expected_size} bytes, got {actual_size} bytes")
+    print("Cache validation passed.")

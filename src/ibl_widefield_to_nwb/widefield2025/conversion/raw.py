@@ -10,7 +10,10 @@ import pandas as pd
 from neuroconv.utils import dict_deep_update, load_dict_from_file
 
 from ibl_widefield_to_nwb.widefield2025 import WidefieldRawNWBConverter
-from ibl_widefield_to_nwb.widefield2025.conversion import build_frame_cache
+from ibl_widefield_to_nwb.widefield2025.conversion import (
+    build_frame_cache,
+    validate_cache,
+)
 
 
 def _get_channel_id_from_wavelength(
@@ -118,6 +121,7 @@ def convert_raw_session(
     # ========================================================================
 
     build_frame_cache(folder_path=data_dir_path, cache_folder_path=cache_dir_path, overwrite=force_cache)
+    validate_cache(cache_folder_path=cache_dir_path)
 
     # ========================================================================
     # STEP 2: Define source data and conversion options
