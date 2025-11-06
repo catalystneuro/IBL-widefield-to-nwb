@@ -34,7 +34,7 @@ class WidefieldImagingExtractor(ImagingExtractor):
         folder_path: DirectoryPath,
         htsv_file_path: FilePath,
         camlog_file_path: FilePath,
-        channel_id: Optional[int] = None,
+        excitation_wavelength_nm: Optional[int] = None,
     ):
         """
         Parameters
@@ -45,13 +45,13 @@ class WidefieldImagingExtractor(ImagingExtractor):
             Path to HTSV file describing LED properties.
         camlog_file_path : FilePath
             Path to camera log file used to determine frame -> timestamp mapping.
-        channel_id : int, optional
-            LED/channel id to extract (defaults to 2).
+        excitation_wavelength_nm : int, optional
+            Excitation wavelength in nm to select the appropriate channel (e.g., 470 for calcium, 405 for isosbestic).
         """
         self.cache_folder = Path(folder_path)
         self.htsv_file_path = str(htsv_file_path)
         self.camlog_file_path = str(camlog_file_path)
-        self.channel_id = int(channel_id or 2)
+        self.excitation_wavelength_nm = excitation_wavelength_nm or 470  # default to 470 nm if not provided
 
         # Load on-disk metadata
         meta_path = self.cache_folder / "meta.json"
@@ -71,17 +71,17 @@ class WidefieldImagingExtractor(ImagingExtractor):
 
         self._camera_log_metadata = self._get_camera_log_metadata()
         imaging_light_source_properties = self.get_imaging_light_source_properties()
+        channel_id = imaging_light_source_properties["LED"]
         if len(imaging_light_source_properties) == 0:
-            raise ValueError(f"No properties found for channel_id '{self.channel_id}'")
-
+            raise ValueError(f"No properties found for channel_id '{channel_id}'")
         # filter for channel_id and compute zero-indexed frame indices
         self._camera_log_metadata = self._camera_log_metadata[
-            self._camera_log_metadata["channel_id"] == int(self.channel_id)
+            self._camera_log_metadata["channel_id"] == int(channel_id)
         ].reset_index(drop=True)
         self._frame_indices = self._camera_log_metadata["frame_id"].astype(int).to_numpy() - 1  # zero indexed
         self._num_channels = len(np.unique(self._camera_log_metadata["channel_id"]))
 
-        suffix = "calcium" if imaging_light_source_properties["wavelength"] == 470 else "isosbestic"
+        suffix = "calcium" if excitation_wavelength_nm == 470 else "isosbestic"
         self._channel_names = [f"optical_channel_{suffix}"]
         super().__init__()
 
