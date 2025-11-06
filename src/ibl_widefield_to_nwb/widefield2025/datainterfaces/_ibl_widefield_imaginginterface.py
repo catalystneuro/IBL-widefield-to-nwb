@@ -25,21 +25,20 @@ class WidefieldImagingInterface(BaseImagingExtractorInterface):
     def __init__(
         self,
         folder_path: DirectoryPath,
+        cache_folder_path: DirectoryPath,
         channel_id: int | None = None,
         photon_series_type: Literal["OnePhotonSeries", "TwoPhotonSeries"] = "OnePhotonSeries",
         verbose: bool = False,
     ):
 
         folder_path = Path(folder_path)
+        cache_folder_path = Path(cache_folder_path)
 
-        movie_file_paths = list(folder_path.glob("*.frames.mov"))
-        if len(movie_file_paths) == 0:
-            raise FileNotFoundError(f"No .frames.mov files found in folder: {folder_path}")
-        elif len(movie_file_paths) > 1:
-            raise ValueError(
-                f"Multiple .frames.mov files found in folder: {folder_path}. Please ensure only one file is present."
+        cached_movie_file_path = cache_folder_path / "frames.dat"
+        if not cached_movie_file_path.exists():
+            raise FileNotFoundError(
+                f"'frames.dat' not found in folder: {cache_folder_path}. Please build frame cache first."
             )
-        movie_file_path = str(movie_file_paths[0])
 
         htsv_file_paths = list(folder_path.glob("*.htsv"))
         if len(htsv_file_paths) == 0:
@@ -60,7 +59,7 @@ class WidefieldImagingInterface(BaseImagingExtractorInterface):
         camlog_file_path = str(camlog_file_paths[0])
 
         super().__init__(
-            file_path=movie_file_path,
+            folder_path=cache_folder_path,
             htsv_file_path=htsv_file_path,
             camlog_file_path=camlog_file_path,
             channel_id=channel_id,
