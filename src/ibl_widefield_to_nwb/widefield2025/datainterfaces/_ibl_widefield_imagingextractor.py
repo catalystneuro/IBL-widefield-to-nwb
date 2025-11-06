@@ -141,7 +141,7 @@ class WidefieldImagingExtractor(ImagingExtractor):
     def get_imaging_light_source_properties(self) -> Dict[str, Any]:
         all_imaging_light_source_properties = self._load_imaging_light_source_properties()
         this_properties = all_imaging_light_source_properties[
-            all_imaging_light_source_properties["LED"] == self.channel_id
+            all_imaging_light_source_properties["wavelength"] == self.excitation_wavelength_nm
         ]
         return this_properties.to_dict(orient="records")[0]
 
