@@ -20,7 +20,9 @@ class WidefieldImagingInterface(BaseImagingExtractorInterface):
     associated_suffixes = (".mov", ".htsv", ".camlog")
     info = "Interface for IBL Widefield imaging data."
 
-    Extractor = WidefieldImagingExtractor
+    @classmethod
+    def get_extractor_class(cls):
+        return WidefieldImagingExtractor
 
     def __init__(
         self,
