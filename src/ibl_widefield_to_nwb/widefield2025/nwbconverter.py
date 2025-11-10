@@ -1,14 +1,7 @@
 """Primary NWBConverter class for this dataset."""
 
-from neuroconv import NWBConverter
-
-from ibl_widefield_to_nwb.widefield2025.datainterfaces import WidefieldImagingInterface
+from neuroconv import ConverterPipe
 
 
-class WidefieldRawNWBConverter(NWBConverter):
-    """Primary conversion class for Widefield raw imaging data."""
-
-    data_interface_classes = dict(
-        ImagingBlue=WidefieldImagingInterface,
-        ImagingViolet=WidefieldImagingInterface,
-    )
+class WidefieldRawNWBConverter(ConverterPipe):
+    """Primary conversion class for Widefield imaging data."""
