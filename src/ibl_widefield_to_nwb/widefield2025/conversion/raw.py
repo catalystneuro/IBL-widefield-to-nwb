@@ -8,12 +8,10 @@ from zoneinfo import ZoneInfo
 import numpy as np
 import pandas as pd
 from neuroconv.utils import dict_deep_update, load_dict_from_file
+from pynwb import read_nwb
 
 from ibl_widefield_to_nwb.widefield2025 import WidefieldRawNWBConverter
-from ibl_widefield_to_nwb.widefield2025.conversion import (
-    build_frame_cache,
-    validate_cache,
-)
+from ibl_widefield_to_nwb.widefield2025.datainterfaces import WidefieldImagingInterface
 
 
 def _get_channel_id_from_wavelength(
@@ -68,20 +66,23 @@ def _get_imaging_times_by_channel_id(
 
 
 def convert_raw_session(
+    nwbfile_path: str | Path,
     raw_data_dir_path: str | Path,
     cache_dir_path: str | Path,
     processed_data_dir_path: str | Path,
     functional_wavelength_nm: int,
     isosbestic_wavelength_nm: int,
-    output_dir_path: str | Path,
     force_cache: bool = False,
     stub_test: bool = False,
+    append_on_disk_nwbfile: bool = False,
 ) -> Path:
     """
     Convert a single session of widefield raw imaging data to NWB format.
 
     Parameters
     ----------
+    nwbfile_path: str or Path
+        Path to the output NWB file.
     raw_data_dir_path: str or Path
         Path to the directory containing the raw widefield data for the session.
     cache_dir_path: str or Path
@@ -96,6 +97,8 @@ def convert_raw_session(
         If True, force rebuilding of the cache even if it already exists.
     stub_test: bool, default: False
         If True, run a stub test (process a small subset of the data for testing purposes).
+    append_on_disk_nwbfile: bool, default: False
+        If True, append data to an existing on-disk NWB file instead of creating a new one.
 
     Returns
     -------
@@ -103,18 +106,18 @@ def convert_raw_session(
         Path to the generated NWB file.
 
     """
+    from ibl_widefield_to_nwb.widefield2025.conversion import (
+        build_frame_cache,
+        validate_cache,
+    )
 
     data_dir_path = Path(raw_data_dir_path)
-    output_dir_path = Path(output_dir_path)
-    if stub_test:
-        output_dir_path = output_dir_path / "nwb_stub"
-    output_dir_path.mkdir(parents=True, exist_ok=True)
+    nwbfile_path = Path(nwbfile_path)
+    nwbfile_path.parent.mkdir(parents=True, exist_ok=True)
 
-    session_id = "subject_identifier_usually"
-    nwbfile_path = output_dir_path / f"{session_id}.nwb"
-
-    source_data = dict()
-    conversion_options = dict()
+    overwrite = False
+    if nwbfile_path.exists() and not append_on_disk_nwbfile:
+        overwrite = True
 
     # ========================================================================
     # STEP 1: Build Frame Cache
@@ -124,19 +127,20 @@ def convert_raw_session(
     validate_cache(cache_folder_path=cache_dir_path)
 
     # ========================================================================
-    # STEP 2: Define source data and conversion options
+    # STEP 2: Define data interfaces and conversion options
     # ========================================================================
 
+    data_interfaces = dict()
+    conversion_options = dict()
+
     # Add Imaging
-    source_data.update(
-        dict(
-            ImagingBlue=dict(
-                folder_path=data_dir_path,
-                cache_folder_path=cache_dir_path,
-                excitation_wavelength_nm=functional_wavelength_nm,
-            )
-        )
+    functional_imaging_interface = WidefieldImagingInterface(
+        folder_path=data_dir_path,
+        cache_folder_path=cache_dir_path,
+        excitation_wavelength_nm=functional_wavelength_nm,
     )
+    data_interfaces.update(ImagingBlue=functional_imaging_interface)
+
     conversion_options.update(
         dict(
             ImagingBlue=dict(
@@ -150,15 +154,13 @@ def convert_raw_session(
             )
         )
     )
-    source_data.update(
-        dict(
-            ImagingViolet=dict(
-                folder_path=data_dir_path,
-                cache_folder_path=cache_dir_path,
-                excitation_wavelength_nm=isosbestic_wavelength_nm,
-            )
-        )
+
+    isosbestic_imaging_interface = WidefieldImagingInterface(
+        folder_path=data_dir_path,
+        cache_folder_path=cache_dir_path,
+        excitation_wavelength_nm=isosbestic_wavelength_nm,
     )
+    data_interfaces.update(ImagingViolet=isosbestic_imaging_interface)
     conversion_options.update(
         dict(
             ImagingViolet=dict(
@@ -181,7 +183,7 @@ def convert_raw_session(
     # STEP 3: Create converter
     # ========================================================================
 
-    converter = WidefieldRawNWBConverter(source_data=source_data)
+    converter = WidefieldRawNWBConverter(data_interfaces=data_interfaces)
 
     # ========================================================================
     # STEP 4: Align times
@@ -240,18 +242,22 @@ def convert_raw_session(
 
     print(f"Writing to NWB '{nwbfile_path}' ...")
     conversion_start = time.time()
-    # Run conversion
+
     converter.run_conversion(
         metadata=metadata,
         nwbfile_path=nwbfile_path,
         conversion_options=conversion_options,
-        overwrite=True,
+        append_on_disk_nwbfile=append_on_disk_nwbfile,
+        overwrite=overwrite,
     )
+
+    nwbfile = read_nwb(nwbfile_path)
+    print(nwbfile.acquisition)
 
     conversion_time = time.time() - conversion_start
 
     # Calculate total size
-    total_size_bytes = Path(nwbfile_path).stat().st_size
+    total_size_bytes = nwbfile_path.stat().st_size
     total_size_gb = total_size_bytes / (1024**3)
 
     print(f"Conversion completed in {int(conversion_time // 60)}:{conversion_time % 60:05.2f} (MM:SS.ss)")
