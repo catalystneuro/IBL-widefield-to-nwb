@@ -19,7 +19,9 @@ class WidefieldSegmentationInterface(BaseSegmentationExtractorInterface):
     associated_suffixes = (".npy", ".json", ".htsv")
     info = "Interface for Widefield segmentation."
 
-    Extractor = WidefieldSegmentationExtractor
+    @classmethod
+    def get_extractor_class(cls):
+        return WidefieldSegmentationExtractor
 
     def __init__(
         self,
