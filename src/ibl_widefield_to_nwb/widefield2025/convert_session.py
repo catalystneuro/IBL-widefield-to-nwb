@@ -1,70 +1,75 @@
 """Primary script to run to convert an entire session for of data using the NWBConverter."""
+
 from pathlib import Path
-from typing import Union
-import datetime
-from zoneinfo import ZoneInfo
 
-from neuroconv.utils import load_dict_from_file, dict_deep_update
-
-from ibl_widefield_to_nwb.widefield2025 import Widefield2025NWBConverter
+from ibl_widefield_to_nwb.widefield2025.conversion import convert_processed_session
 
 
-def session_to_nwb(data_dir_path: Union[str, Path], output_dir_path: Union[str, Path], stub_test: bool = False):
+def session_to_nwb(
+    nwbfile_path: str | Path,
+    processed_data_dir_path: str | Path,
+    functional_wavelength_nm: int,
+    isosbestic_wavelength_nm: int,
+    mode: str = "raw",
+    stub_test: bool = False,
+    append_on_disk_nwbfile: bool = False,
+):
+    """
+    Convert a single session of widefield raw imaging data to NWB format.
 
-    data_dir_path = Path(data_dir_path)
-    output_dir_path = Path(output_dir_path)
-    if stub_test:
-        output_dir_path = output_dir_path / "nwb_stub"
-    output_dir_path.mkdir(parents=True, exist_ok=True)
+    Parameters
+    ----------
+    nwbfile_path: str or Path
+        Path to the output NWB file.
+    processed_data_dir_path: str or Path
+        Path to the directory containing processed data.
+    functional_wavelength_nm: int
+        Wavelength (in nm) for the functional imaging data.
+    isosbestic_wavelength_nm: int
+        Wavelength (in nm) for the isosbestic imaging data.
+    mode: str, default: "raw"
+        Mode of conversion. Options are "raw" or "processed".
+    stub_test: bool, default: False
+        If True, run a stub test (process a small subset of the data for testing purposes).
+    append_on_disk_nwbfile: bool, default: False
+        If True, append data to an existing on-disk NWB file instead of creating a new one.
 
-    session_id = "subject_identifier_usually"
-    nwbfile_path = output_dir_path / f"{session_id}.nwb"
+    """
 
-    source_data = dict()
-    conversion_options = dict()
-
-    # Add Recording
-    source_data.update(dict(Recording=dict()))
-    conversion_options.update(dict(Recording=dict(stub_test=stub_test)))
-
-    # Add Sorting
-    source_data.update(dict(Sorting=dict()))
-    conversion_options.update(dict(Sorting=dict()))
-
-    # Add Behavior
-    source_data.update(dict(Behavior=dict()))
-    conversion_options.update(dict(Behavior=dict()))
-
-    converter = Widefield2025NWBConverter(source_data=source_data)
-
-    # Add datetime to conversion
-    metadata = converter.get_metadata()
-    date = datetime.datetime(year=2020, month=1, day=1, tzinfo=ZoneInfo("US/Eastern"))
-    metadata["NWBFile"]["session_start_time"] = date
-
-    # Update default metadata with the editable in the corresponding yaml file
-    editable_metadata_path = Path(__file__).parent / "widefield2025_metadata.yaml"
-    editable_metadata = load_dict_from_file(editable_metadata_path)
-    metadata = dict_deep_update(metadata, editable_metadata)
-
-    metadata["Subject"]["subject_id"] = "a_subject_id"  # Modify here or in the yaml file
-
-    # Run conversion
-    converter.run_conversion(metadata=metadata, nwbfile_path=nwbfile_path, conversion_options=conversion_options)
+    match mode:
+        case "processed":
+            nwbfile_path = convert_processed_session(
+                nwbfile_path=nwbfile_path,
+                processed_data_dir_path=processed_data_dir_path,
+                functional_wavelength_nm=functional_wavelength_nm,
+                isosbestic_wavelength_nm=isosbestic_wavelength_nm,
+                stub_test=stub_test,
+                append_on_disk_nwbfile=append_on_disk_nwbfile,
+            )
 
 
 if __name__ == "__main__":
 
     # Parameters for conversion
-    data_dir_path = Path("/Directory/With/Raw/Formats/")
-    output_dir_path = Path("~/conversion_nwb/")
-    stub_test = False
+    data_dir_path = Path("/Volumes/T9/data/IBL/zadorlab/Subjects/CSK-im-011/2021-07-13/001")
+    processed_data_dir_path = data_dir_path / "alf/widefield"
 
-<<<<<<< HEAD:IBL-widefield-to-nwb/src/ibl_widefield_to_nwb/widefield2025/convert_session.py
-    session_to_nwb(data_dir_path=data_dir_path, output_dir_path=output_dir_path, stub_test=stub_test)
-=======
-    session_to_nwb(data_dir_path=data_dir_path,
-                    output_dir_path=output_dir_path,
-                    stub_test=stub_test,
-                    )
->>>>>>> main:IBL-widefield-to-nwb/src/ibl_widefield_to_nwb/widefield2025/widefield2025_convert_session.py
+    output_dir_path = Path("/Volumes/T9/data/IBL/nwbfiles")
+    nwbfile_path = (
+        output_dir_path / "/Volumes/T9/data/IBL/nwbfiles/84565bbe-fd4c-4bdb-af55-968d46a4c424-behav-processed.nwb"
+    )
+    append_on_disk_nwbfile = True  # Set to True to append to an existing NWB file
+
+    functional_wavelength_nm = 470  # The wavelength for functional imaging (e.g. 470 nm)
+    isosbestic_wavelength_nm = 405  # The wavelength for isosbestic imaging (e.g. 405 nm)
+
+    stub_test = False  # Set to True for quick testing with limited data
+    session_to_nwb(
+        mode="processed",
+        nwbfile_path=nwbfile_path,
+        processed_data_dir_path=processed_data_dir_path,
+        functional_wavelength_nm=functional_wavelength_nm,
+        isosbestic_wavelength_nm=isosbestic_wavelength_nm,
+        stub_test=stub_test,
+        append_on_disk_nwbfile=append_on_disk_nwbfile,
+    )
