@@ -38,8 +38,18 @@ def session_to_nwb(
 
     match mode:
         case "processed":
+            cache_dir = Path("/Volumes/T9/data/IBL")
+            one_api_kwargs = dict(
+                base_url="https://alyx.internationalbrainlab.org",
+                username="catalyst.neuro",
+                silent=True,
+                make_default=True,
+                cache_dir=cache_dir,
+            )
             nwbfile_path = convert_processed_session(
                 nwbfile_path=nwbfile_path,
+                one_api_kwargs=one_api_kwargs,
+                eid="84565bbe-fd4c-4bdb-af55-968d46a4c424",
                 processed_data_dir_path=processed_data_dir_path,
                 functional_wavelength_nm=functional_wavelength_nm,
                 isosbestic_wavelength_nm=isosbestic_wavelength_nm,
@@ -56,7 +66,7 @@ if __name__ == "__main__":
 
     output_dir_path = Path("/Volumes/T9/data/IBL/nwbfiles")
     nwbfile_path = (
-        output_dir_path / "/Volumes/T9/data/IBL/nwbfiles/84565bbe-fd4c-4bdb-af55-968d46a4c424-behav-processed.nwb"
+        output_dir_path / "/Volumes/T9/data/IBL/nwbfiles/84565bbe-fd4c-4bdb-af55-968d46a4c424-behav+imaging.nwb"
     )
     append_on_disk_nwbfile = True  # Set to True to append to an existing NWB file
 

@@ -13,11 +13,13 @@ from ibl_widefield_to_nwb.widefield2025.datainterfaces import (
 
 def convert_processed_session(
     nwbfile_path: str | Path,
+    eid: str,
     processed_data_dir_path: str | Path,
     functional_wavelength_nm: int,
     isosbestic_wavelength_nm: int,
     stub_test: bool = False,
     append_on_disk_nwbfile: bool = False,
+    one_api_kwargs: dict | None = None,
 ):
     """
     Convert a single session of processed widefield imaging data to NWB format.
@@ -56,8 +58,6 @@ def convert_processed_session(
     if nwbfile_path.exists() and not append_on_disk_nwbfile:
         overwrite = True
 
-    session_id = "subject_identifier_usually"
-
     data_interfaces = dict()
     conversion_options = dict()
 
@@ -79,17 +79,47 @@ def convert_processed_session(
     conversion_options.update(
         dict(SegmentationViolet=dict(plane_segmentation_name="plane_segmentation_isosbestic", stub_test=stub_test))
     )
+    session_start_time = None
+    if one_api_kwargs is not None:
+        from one.api import ONE
 
-    # Add Behavior
-    # source_data.update(dict(Behavior=dict()))
-    # conversion_options.update(dict(Behavior=dict()))
+        ONE.setup(**one_api_kwargs)
+        one = ONE()
+
+        try:
+            ((session_metadata),) = one.alyx.rest(url="sessions", action="list", id=eid)
+        except Exception as e:
+            raise RuntimeError(f"Failed to access ONE for eid {eid}: {e}")
+
+        session_start_time = datetime.fromisoformat(session_metadata["start_time"])
+
+        try:
+            from ibl_to_nwb.datainterfaces import (
+                BrainwideMapTrialsInterface,
+                LickInterface,
+                PassivePeriodDataInterface,
+                RawVideoInterface,
+                WheelInterface,
+            )
+        except ImportError as e:
+            raise ImportError(f"Please install ibl-to-nwb to use ONE data interfaces: {e}")
+
+        data_interfaces.update(
+            Wheel=WheelInterface(one=one, session=eid),
+            PassivePeriodData=PassivePeriodDataInterface(one=one, session=eid),
+            BrainwideMapTrials=BrainwideMapTrialsInterface(one=one, session=eid),
+        )
 
     converter = WidefieldProcessedNWBConverter(data_interfaces=data_interfaces)
 
     # Add datetime to conversion
     metadata = converter.get_metadata()
-    date = datetime.datetime(year=2020, month=1, day=1, tzinfo=ZoneInfo("US/Eastern"))
-    metadata["NWBFile"]["session_start_time"] = date
+    if session_start_time is not None:
+        session_start_time.replace(tzinfo=ZoneInfo("America/New_York"))
+    # TODO: remove this else after using ONE api
+    else:
+        session_start_time = datetime.datetime(year=2020, month=1, day=1, tzinfo=ZoneInfo("US/Eastern"))
+    metadata["NWBFile"]["session_start_time"] = session_start_time
 
     # Update default metadata with the editable in the corresponding yaml file
     editable_metadata_path = Path(__file__).parent.parent / "metadata" / "widefield_general_metadata.yaml"
@@ -102,7 +132,7 @@ def convert_processed_session(
     metadata = dict_deep_update(metadata, ophys_metadata)
 
     metadata["Subject"]["subject_id"] = "a_subject_id"  # Modify here or in the yaml file
-    metadata["NWBFile"]["session_id"] = session_id
+    metadata["NWBFile"]["session_id"] = eid
 
     print(f"Writing to NWB '{nwbfile_path}' ...")
     conversion_start = time.time()
