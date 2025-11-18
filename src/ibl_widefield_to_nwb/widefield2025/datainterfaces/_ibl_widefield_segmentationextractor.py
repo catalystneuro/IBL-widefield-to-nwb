@@ -1,10 +1,11 @@
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
 from pydantic import DirectoryPath
 from roiextractors import SegmentationExtractor
+from roiextractors.segmentationextractor import _ROIMasks, _RoiResponse
 
 
 class WidefieldSegmentationExtractor(SegmentationExtractor):
@@ -35,10 +36,25 @@ class WidefieldSegmentationExtractor(SegmentationExtractor):
             The excitation wavelength (in nm) for the channel to load.
         """
         super().__init__()
-        self.folder_path = Path(folder_path)
 
+        self.folder_path = Path(folder_path)
         self.excitation_wavelength_nm = excitation_wavelength_nm
 
+        # Timestamps (both channels)
+        self._timestamps_file_name = "imaging.times.npy"
+        # Imaging light source properties (contains channel ids for each wavelength)
+        self._imaging_light_source_properties_file_name = "imagingLightSource.properties.htsv"
+        self._imaging_light_source_file_name = "imaging.imagingLightSource.npy"
+        # Raw traces (both channels)
+        self._raw_traces_file_name = "widefieldSVT.uncorrected.npy"
+        # Corrected traces (only calcium channel)
+        self._corrected_traces_file_name = "widefieldSVT.haemoCorrected.npy"
+        # ROI masks (same for both channels)
+        self._ROI_masks_file_name = "widefieldU.images.npy"
+        # summary images (both channels)
+        self._mean_image_file_name = "widefieldChannels.frameAverage.npy"
+
+        # Contains channel_id, color, wavelength information for the selected excitation wavelength
         imaging_light_source_properties = self.get_imaging_light_source_properties()
         if len(imaging_light_source_properties) == 0:
             raise ValueError(f"No properties found for excitation wavelength '{self.excitation_wavelength_nm}' nm.")
@@ -48,69 +64,61 @@ class WidefieldSegmentationExtractor(SegmentationExtractor):
 
         # This is available for both channels
         all_times = self._load_times()
-        imaging_indices = self.get_imaging_indices()
-        self._times = all_times[imaging_indices]
-        # widefieldSVT.uncorrected.54b4c57c-b25c-4eb9-9d0f-76654d84a005.npy
-        all_roi_response_raw = self._load_roi_response_raw()
-        # Originally this is (num_rois, num_timepoints), we transpose to (num_timepoints, num_rois)
-        self._roi_response_raw = all_roi_response_raw[:, imaging_indices].T
-        self._num_rois = self._roi_response_raw.shape[-1]
-        # widefieldChannels.frameAverage.4b030254-be6d-4e8a-bf40-8316df71b710.npy
-        mean_image = self._load_mean_image()
-        self._image_mean = mean_image[imaging_indices[0], ...]
+        self._frames_indices = self.get_frame_indices()
+        self._times = all_times[self._frames_indices]
 
-        # TODO: how to solve that this should only be loaded for the functional channel
-        self._roi_response_dff = None
-        self._image_masks = None
-        if imaging_light_source_properties["wavelength"] == 470:
-            # widefieldSVT.haemoCorrected.fb72c7a7-6165-4931-9d6e-3600b26ea525.npy
-            roi_response_dff = self._load_roi_response_dff()
-            # This is again (num_rois, num_timepoints), we transpose to (num_timepoints, num_rois)
-            self._roi_response_dff = roi_response_dff.T
-
-            # widefieldU.images.75628fe6-1c05-4a62-96c9-0478ebfa42b0.npy
-        # TODO: how to add image mask for other channel?
-        all_images = self._load_images()
-        self._image_masks = all_images
+        # ROI masks (height, width, n_rois)
+        all_image_masks = self._load_images()
+        cell_ids = self.get_roi_ids()
+        roi_id_map = {roi_id: index for index, roi_id in enumerate(cell_ids)}
+        self._frame_shape = self.get_frame_shape()
+        self._roi_masks = _ROIMasks(
+            data=all_image_masks,
+            mask_tpe="nwb-image_mask",
+            field_of_view_shape=self._frame_shape,
+            roi_id_map=roi_id_map,
+        )
         self._properties = {}
 
     # TODO: replace with loading from ONE API
     def _load_times(self) -> np.ndarray:
-        times_file_name = "imaging.times.npy"
-        all_imaging_times = np.load(self.folder_path / times_file_name)
+        all_imaging_times = np.load(self.folder_path / self._timestamps_file_name)
         return all_imaging_times
 
     # TODO: replace with loading from ONE API
     def _load_imaging_light_source_properties(self) -> pd.DataFrame:
-        file_name = "imagingLightSource.properties.htsv"
-        all_imaging_light_source_properties = pd.read_csv(self.folder_path / file_name)
+        all_imaging_light_source_properties = pd.read_csv(
+            self.folder_path / self._imaging_light_source_properties_file_name
+        )
         return all_imaging_light_source_properties
 
     # TODO: replace with loading from ONE API
     def _load_roi_response_raw(self) -> np.ndarray:
-        file_name = "widefieldSVT.uncorrected.npy"
-        all_roi_response_raw = np.load(self.folder_path / file_name)
+        all_roi_response_raw = np.load(self.folder_path / self._raw_traces_file_name)
         return all_roi_response_raw
 
+    # TODO: replace with loading from ONE API
     def _load_roi_response_dff(self) -> np.ndarray:
-        file_name = "widefieldSVT.haemoCorrected.npy"
-        all_roi_response_dff = np.load(self.folder_path / file_name)
+        all_roi_response_dff = np.load(self.folder_path / self._corrected_traces_file_name)
         return all_roi_response_dff
 
-    def _load_mean_image(self):
-        file_name = "widefieldChannels.frameAverage.npy"
-        all_mean_image = np.load(self.folder_path / file_name)
-        return all_mean_image
+    # TODO: replace with loading from ONE API
+    def _load_mean_image(self) -> np.ndarray:
+        mean_images = np.load(self.folder_path / self._mean_image_file_name)
+        first_frame_index = self._frames_indices[0]
+        mean_image = mean_images[first_frame_index, ...]
+        return mean_image
 
+    # TODO: replace with loading from ONE API
     def _load_images(self):
-        file_name = "widefieldU.images.npy"
-        all_images = np.load(self.folder_path / file_name)
+        all_images = np.load(self.folder_path / self._ROI_masks_file_name)
         return all_images
 
+    # TODO: replace with loading from ONE API
     def _load_imaging_light_source(self) -> np.ndarray:
-        file_name = "imaging.imagingLightSource.npy"
-        return np.load(self.folder_path / file_name, allow_pickle=True)
+        return np.load(self.folder_path / self._imaging_light_source_file_name, allow_pickle=True)
 
+    # TODO: replace with loading from ONE API
     def get_imaging_light_source_properties(self) -> Dict[str, Any]:
         all_imaging_light_source_properties = self._load_imaging_light_source_properties()
         this_properties = all_imaging_light_source_properties[
@@ -118,27 +126,17 @@ class WidefieldSegmentationExtractor(SegmentationExtractor):
         ]
         return this_properties.to_dict(orient="records")[0]
 
-    def get_imaging_indices(self) -> np.ndarray:
-        """Get the imaging indices for the selected channel.
+    def get_frame_indices(self) -> np.ndarray:
+        """Get the frame indices for the selected channel.
 
         Returns
         -------
         imaging_indices: np.ndarray
-            1-D array of imaging indices.
+            1-D array of frame indices.
         """
         light_sources = self._load_imaging_light_source()
-        imaging_indices = np.where(light_sources == self.channel_id)[0]
-        return imaging_indices
-
-    def get_num_rois(self) -> int:
-        """Get total number of Regions of Interest (ROIs) in the acquired images.
-
-        Returns
-        -------
-        num_rois: int
-            The number of ROIs extracted.
-        """
-        return self._num_rois
+        frame_indices = np.where(light_sources == self.channel_id)[0]
+        return frame_indices
 
     def get_accepted_list(self) -> list:
         """Get a list of accepted ROI ids.
@@ -177,11 +175,9 @@ class WidefieldSegmentationExtractor(SegmentationExtractor):
         timestamps : np.ndarray or None
             The original timestamps in seconds, or None if not available.
         """
-        times_file_name = "imaging.times.npy"
-        all_times = np.load(self.folder_path / times_file_name)
-        light_source_file_name = "imaging.imagingLightSource.npy"
+        all_times = np.load(self.folder_path / self._timestamps_file_name)
+        light_sources = np.load(self.folder_path / self._imaging_light_source_file_name)
 
-        light_sources = np.load(self.folder_path / light_source_file_name)
         native_timestamps = all_times[light_sources == self.channel_id]
 
         # Set defaults
@@ -193,11 +189,74 @@ class WidefieldSegmentationExtractor(SegmentationExtractor):
         return native_timestamps[start_sample:end_sample]
 
     def get_frame_shape(self) -> tuple[int, int]:
-        """Get frame size of movie (height, width).
+        """Get the shape of the frames in the recording.
 
         Returns
         -------
-        frame_shape: array_like
-            2-D array: image height x image width
+        frame_shape: tuple[int, int]
+            Shape of the frames in the recording.
         """
-        return self._image_mean.shape
+        if not hasattr(self, "_frame_shape"):
+            image_mean = self._load_mean_image()
+            assert image_mean is not None, f"{self._mean_image_file_name} is required but could not be loaded"
+            self._frame_shape = (image_mean.shape[0], image_mean.shape[1])
+        return self._frame_shape
+
+    def _get_rois_responses(self) -> List[_RoiResponse]:
+        """Load the ROI responses from uncorrected and corrected files.
+        Returns
+        -------
+        _roi_responses: List[_RoiResponse]
+            List of _RoiResponse objects containing the ROI responses.
+        """
+        if not self._roi_responses:
+            self._roi_responses = []
+
+            # This loads the raw traces for all channels
+            raw_traces = self._load_roi_response_raw()
+            # Originally this is (num_rois, num_timepoints), we transpose to (num_timepoints, num_rois)
+            frame_indices = self.get_frame_indices()
+            raw_traces = raw_traces[:, frame_indices].T
+
+            cell_ids = list(range(raw_traces.shape[1]))
+            self._roi_responses.append(_RoiResponse("raw", raw_traces, cell_ids))
+
+            if self.excitation_wavelength_nm == 470:
+                # widefieldSVT.haemoCorrected.npy
+                dff_traces = self._load_roi_response_dff()
+                # This is again (num_rois, num_timepoints), we transpose to (num_timepoints, num_rois)
+                dff_traces = dff_traces.T
+                self._roi_responses.append(_RoiResponse("dff", dff_traces, list(cell_ids)))
+
+        return self._roi_responses
+
+    def get_traces_dict(self) -> dict:
+        """Get traces as a dictionary with key as the name of the ROiResponseSeries.
+
+        Returns
+        -------
+        _roi_response_dict: dict
+            dictionary with key, values representing different types of RoiResponseSeries:
+                Raw Fluorescence, DeltaFOverF, Denoised, Neuropil, Deconvolved, Background, etc.
+        """
+        if not self._roi_responses:
+            self._get_rois_responses()
+
+        traces = {response.response_type: response.data for response in self._roi_responses}
+        return traces
+
+    def get_images_dict(self) -> dict:
+        """Get images as a dictionary with key as the name of the ROIResponseSeries.
+
+        Returns
+        -------
+        _summary_images: dict
+            dictionary with key, values representing different types of Images used in segmentation:
+                Mean, Correlation image, Maximum projection, etc.
+        """
+        if not self._summary_images:
+            self._summary_images = {}
+            mean_image = self._load_mean_image()
+            if mean_image is not None:
+                self._summary_images["mean"] = mean_image
+        return self._summary_images
