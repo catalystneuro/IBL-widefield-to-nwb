@@ -6,6 +6,9 @@ from zoneinfo import ZoneInfo
 from neuroconv.utils import dict_deep_update, load_dict_from_file
 
 from ibl_widefield_to_nwb.widefield2025 import WidefieldProcessedNWBConverter
+from ibl_widefield_to_nwb.widefield2025.datainterfaces import (
+    WidefieldSegmentationInterface,
+)
 
 
 def convert_processed_session(
@@ -55,27 +58,24 @@ def convert_processed_session(
 
     session_id = "subject_identifier_usually"
 
-    source_data = dict()
+    data_interfaces = dict()
     conversion_options = dict()
 
     # Add Segmentation
-    source_data.update(
-        dict(
-            SegmentationBlue=dict(
-                folder_path=processed_data_dir_path, excitation_wavelength_nm=functional_wavelength_nm
-            )
-        )
+    functional_image_segmentation_interface = WidefieldSegmentationInterface(
+        folder_path=processed_data_dir_path,
+        excitation_wavelength_nm=functional_wavelength_nm,
     )
+    data_interfaces.update(dict(SegmentationBlue=functional_image_segmentation_interface))
     conversion_options.update(
         dict(SegmentationBlue=dict(plane_segmentation_name="plane_segmentation_calcium", stub_test=stub_test))
     )
-    source_data.update(
-        dict(
-            SegmentationViolet=dict(
-                folder_path=processed_data_dir_path, excitation_wavelength_nm=isosbestic_wavelength_nm
-            )
-        )
+
+    isosbestic_image_segmentation_interface = WidefieldSegmentationInterface(
+        folder_path=processed_data_dir_path,
+        excitation_wavelength_nm=isosbestic_wavelength_nm,
     )
+    data_interfaces.update(dict(SegmentationViolet=isosbestic_image_segmentation_interface))
     conversion_options.update(
         dict(SegmentationViolet=dict(plane_segmentation_name="plane_segmentation_isosbestic", stub_test=stub_test))
     )
@@ -84,7 +84,7 @@ def convert_processed_session(
     # source_data.update(dict(Behavior=dict()))
     # conversion_options.update(dict(Behavior=dict()))
 
-    converter = WidefieldProcessedNWBConverter(source_data=source_data)
+    converter = WidefieldProcessedNWBConverter(data_interfaces=data_interfaces)
 
     # Add datetime to conversion
     metadata = converter.get_metadata()
