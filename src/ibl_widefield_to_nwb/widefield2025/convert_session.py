@@ -10,6 +10,7 @@ def session_to_nwb(
     raw_data_dir_path: str | Path,
     cache_dir_path: str | Path,
     nidq_data_dir_path: str | Path,
+    processed_data_dir_path: str | Path,
     functional_wavelength_nm: int,
     isosbestic_wavelength_nm: int,
     mode: str = "raw",
@@ -30,6 +31,8 @@ def session_to_nwb(
         Path to the directory for caching intermediate data.
     nidq_data_dir_path: str or Path
         Path to the directory containing NIDQ data.
+    processed_data_dir_path: str or Path
+        Path to the directory containing processed widefield data.
     functional_wavelength_nm: int
         Wavelength (in nm) for the functional imaging data.
     isosbestic_wavelength_nm: int
@@ -50,6 +53,7 @@ def session_to_nwb(
                 raw_data_dir_path=raw_data_dir_path,
                 cache_dir_path=cache_dir_path,
                 nidq_data_dir_path=nidq_data_dir_path,
+                processed_data_dir_path=processed_data_dir_path,
                 functional_wavelength_nm=functional_wavelength_nm,
                 isosbestic_wavelength_nm=isosbestic_wavelength_nm,
                 force_cache=force_cache,
@@ -65,6 +69,7 @@ if __name__ == "__main__":
     raw_data_dir_path = data_dir_path / "raw_widefield_data"
     cache_dir_path = raw_data_dir_path / "wf_cache"
     nidq_data_dir_path = data_dir_path / "raw_ephys_data/decompressed"
+    processed_data_dir_path = data_dir_path / "alf/widefield"
 
     output_dir_path = Path("/Volumes/T9/data/IBL/nwbfiles")
     nwbfile_path = output_dir_path / "/Volumes/T9/data/IBL/nwbfiles/84565bbe-fd4c-4bdb-af55-968d46a4c424-raw-nidq.nwb"
@@ -79,6 +84,7 @@ if __name__ == "__main__":
         nwbfile_path=nwbfile_path,
         raw_data_dir_path=raw_data_dir_path,
         cache_dir_path=cache_dir_path,
+        processed_data_dir_path=processed_data_dir_path,
         nidq_data_dir_path=nidq_data_dir_path,
         functional_wavelength_nm=functional_wavelength_nm,
         isosbestic_wavelength_nm=isosbestic_wavelength_nm,
