@@ -18,6 +18,7 @@ def convert_raw_session(
     raw_data_dir_path: str | Path,
     cache_dir_path: str | Path,
     nidq_data_dir_path: str | Path,
+    processed_data_dir_path: str | Path,
     functional_wavelength_nm: int,
     isosbestic_wavelength_nm: int,
     force_cache: bool = False,
@@ -144,10 +145,13 @@ def convert_raw_session(
     # STEP 3: Create converter
     # ========================================================================
 
-    converter = WidefieldRawNWBConverter(data_interfaces=data_interfaces)
+    converter = WidefieldRawNWBConverter(
+        data_interfaces=data_interfaces,
+        processed_data_folder_path=processed_data_dir_path,
+    )
 
     # ========================================================================
-    # STEP 5: Get metadata
+    # STEP 4: Get metadata
     # ========================================================================
 
     # Add datetime to conversion
@@ -173,7 +177,7 @@ def convert_raw_session(
     metadata["Subject"]["subject_id"] = "a_subject_id"  # Modify here or in the yaml file
 
     # ========================================================================
-    # STEP 6: Write NWB file to disk
+    # STEP 5: Write NWB file to disk
     # ========================================================================
 
     print(f"Writing to NWB '{nwbfile_path}' ...")
