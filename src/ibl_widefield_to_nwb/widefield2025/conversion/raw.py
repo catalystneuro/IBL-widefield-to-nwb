@@ -5,6 +5,7 @@ import time
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+from neuroconv.datainterfaces import SpikeGLXNIDQInterface
 from neuroconv.utils import dict_deep_update, load_dict_from_file
 from pynwb import read_nwb
 
@@ -16,6 +17,7 @@ def convert_raw_session(
     nwbfile_path: str | Path,
     raw_data_dir_path: str | Path,
     cache_dir_path: str | Path,
+    nidq_data_dir_path: str | Path,
     functional_wavelength_nm: int,
     isosbestic_wavelength_nm: int,
     force_cache: bool = False,
@@ -33,8 +35,8 @@ def convert_raw_session(
         Path to the directory containing the raw widefield data for the session.
     cache_dir_path: str or Path
         Path to the directory for caching intermediate data.
-    output_dir_path: str or Path
-        Path to the directory where the output NWB file will be saved.
+    nidq_data_dir_path: str or Path
+        Path to the directory containing NIDQ data.
     functional_wavelength_nm: int
         Wavelength (in nm) for the functional (calcium) imaging data.
     isosbestic_wavelength_nm: int
@@ -121,6 +123,19 @@ def convert_raw_session(
         )
     )
 
+    # Add NIDQ
+    nidq_interface = SpikeGLXNIDQInterface(
+        folder_path=nidq_data_dir_path,
+    )
+    data_interfaces.update(NIDQ=nidq_interface)
+    conversion_options.update(
+        dict(
+            NIDQ=dict(
+                stub_test=stub_test,
+            )
+        )
+    )
+
     # Add Behavior
     # source_data.update(dict(Behavior=dict()))
     # conversion_options.update(dict(Behavior=dict()))
@@ -149,6 +164,11 @@ def convert_raw_session(
     ophys_metadata_path = Path(__file__).parent.parent / "metadata" / "widefield_ophys_metadata.yaml"
     ophys_metadata = load_dict_from_file(ophys_metadata_path)
     metadata = dict_deep_update(metadata, ophys_metadata)
+
+    # Update nidq metadata with wiring info
+    nidq_metadata_path = Path(__file__).parent.parent / "metadata" / "widefield_nidq_metadata.yaml"
+    nidq_metadata = load_dict_from_file(nidq_metadata_path)
+    metadata = dict_deep_update(metadata, nidq_metadata)
 
     metadata["Subject"]["subject_id"] = "a_subject_id"  # Modify here or in the yaml file
 
