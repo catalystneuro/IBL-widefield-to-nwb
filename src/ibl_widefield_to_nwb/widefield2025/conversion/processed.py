@@ -1,5 +1,5 @@
-import datetime
 import time
+from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -115,10 +115,10 @@ def convert_processed_session(
     # Add datetime to conversion
     metadata = converter.get_metadata()
     if session_start_time is not None:
-        session_start_time.replace(tzinfo=ZoneInfo("America/New_York"))
+        session_start_time = session_start_time.replace(tzinfo=ZoneInfo("America/New_York"))
     # TODO: remove this else after using ONE api
     else:
-        session_start_time = datetime.datetime(year=2020, month=1, day=1, tzinfo=ZoneInfo("US/Eastern"))
+        session_start_time = datetime(year=2020, month=1, day=1, tzinfo=ZoneInfo("US/Eastern"))
     metadata["NWBFile"]["session_start_time"] = session_start_time
 
     # Update default metadata with the editable in the corresponding yaml file
