@@ -9,9 +9,9 @@ Ophys:
       location: unknown # TODO
       indicator: GCaMP6f # Maybe this was only for Mesoscope and not for Widefield
       optical_channel:
-        - name: optical_channel_calcium
+        - name: green_channel_calcium
           emission_lambda: 510.0  # in nm (peak emission wavelength)  # TODO
-          description: GCaMP excitation LED (470 nm) (Thorlabs, cat. no. M470L4)
+          description: GCaMP Ca2+ bound emission (calcium signal).
       device: widefield_microscope
     - name: imaging_plane_isosbestic
       description: The imaging plane for widefield fluorescence under violet excitation at 405 nm (isosbestic control).
@@ -19,9 +19,9 @@ Ophys:
       location: unknown # TODO
       indicator: GCaMP6f
       optical_channel:
-        - name: optical_channel_isosbestic
+        - name: green_channel_isosbestic
           emission_lambda: 510.0  # in nm (peak emission wavelength)  # TODO
-          description: Hemodynamic correction LED (405 nm) (Thorlabs, cat. no. M405L4)
+          description: GCaMP Ca2+ independent emission (isosbestic signal).
       device: widefield_microscope
   ImageSegmentation:
     plane_segmentations:
