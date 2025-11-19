@@ -1,3 +1,6 @@
-from .nwbconverter import WidefieldProcessedNWBConverter
+from .nwbconverter import WidefieldProcessedNWBConverter, WidefieldRawNWBConverter
 
-__all__ = ["WidefieldProcessedNWBConverter"]
+__all__ = [
+    "WidefieldProcessedNWBConverter",
+    "WidefieldRawNWBConverter",
+]

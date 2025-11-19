@@ -11,7 +11,7 @@ Ophys:
       optical_channel:
         - name: green_channel_calcium
           emission_lambda: 510.0  # in nm (peak emission wavelength)  # TODO
-          description: GCaMP Ca2+ bound emission (calcium signal).
+          description: GCaMP Ca2+ bound emission (calcium signal). (Thorlabs, cat. no. M470L4)
       device: widefield_microscope
     - name: imaging_plane_isosbestic
       description: The imaging plane for calcium imaging from Violet light excitation.
@@ -21,8 +21,15 @@ Ophys:
       optical_channel:
         - name: green_channel_isosbestic
           emission_lambda: 510.0  # in nm (peak emission wavelength)  # TODO
-          description: GCaMP Ca2+ independent emission (isosbestic signal).
+          description:  GCaMP Ca2+ independent emission (isosbestic signal). (Thorlabs, cat. no. M405L4)
       device: widefield_microscope
+  OnePhotonSeries:
+    - name: one_photon_series_calcium
+      description: Widefield raw imaging under blue excitation at 470 nm (GCaMP signal).
+      imaging_plane: imaging_plane_calcium
+    - name: one_photon_series_isosbestic
+      description: Widefield raw imaging under violet excitation at 405 nm (isosbestic control).
+      imaging_plane: imaging_plane_isosbestic
   ImageSegmentation:
     plane_segmentations:
       - name: plane_segmentation_calcium
