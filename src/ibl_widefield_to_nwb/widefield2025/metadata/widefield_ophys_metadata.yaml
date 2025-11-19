@@ -30,3 +30,31 @@ Ophys:
     - name: one_photon_series_isosbestic
       description: Widefield raw imaging under violet excitation at 405 nm (isosbestic control).
       imaging_plane: imaging_plane_isosbestic
+  ImageSegmentation:
+    plane_segmentations:
+      - name: plane_segmentation_calcium
+      - name: plane_segmentation_isosbestic
+  Fluorescence:
+    plane_segmentation_calcium:
+      raw:
+        name: roi_response_series
+        description: Raw fluorescence traces for widefield calcium imaging from Blue light (470 nm) excitation.
+        unit: n.a.
+    plane_segmentation_isosbestic:
+      raw:
+        name: roi_response_series_isosbestic
+        description: Raw fluorescence traces for widefield calcium imaging from Violet light (405 nm) excitation.
+  DfOverF:
+    plane_segmentation_calcium:
+      dff:
+        name: roi_response_series
+        description: Df/F traces for widefield calcium imaging.
+  SegmentationImages:
+    plane_segmentation_calcium:
+      mean:
+        name: mean_image
+        description: The mean image under Blue (470 nm) excitation across the imaging session.
+    plane_segmentation_isosbestic:
+      mean:
+        name: mean_image_isosbestic
+        description: The mean image under Violet (405 nm) excitation across the imaging session.

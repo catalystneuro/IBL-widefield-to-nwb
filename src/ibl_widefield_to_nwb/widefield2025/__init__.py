@@ -1,7 +1,6 @@
-from .behaviorinterface import Widefield2025BehaviorInterface
-from .nwbconverter import WidefieldRawNWBConverter
+from .nwbconverter import WidefieldProcessedNWBConverter, WidefieldRawNWBConverter
 
 __all__ = [
-    "Widefield2025BehaviorInterface",
+    "WidefieldProcessedNWBConverter",
     "WidefieldRawNWBConverter",
 ]
