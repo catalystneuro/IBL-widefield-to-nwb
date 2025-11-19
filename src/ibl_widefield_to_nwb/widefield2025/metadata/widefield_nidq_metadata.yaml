@@ -1,3 +1,14 @@
+# Analog signals metadata
+TimeSeries:
+  SpikeGLXNIDQ:
+      name: "TimeSeriesBpod"
+      description:  |
+        Analog signal from Bpod behavioral control system.
+        This continuous voltage signal encodes behavioral state machine events and timestamps from the Bpod system,
+        which controls stimulus presentation and reward delivery during tasks.
+        The analog encoding allows precise temporal alignment between Bpod events and neural recordings.
+
+# Digital signals metadata
 Events:
   SpikeGLXNIDQ:
     "nidq#XD0":
