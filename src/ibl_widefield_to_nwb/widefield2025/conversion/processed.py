@@ -61,23 +61,23 @@ def convert_processed_session(
     # Add Segmentation
     source_data.update(
         dict(
-            SegmentationBlue=dict(
+            SegmentationCalcium=dict(
                 folder_path=processed_data_dir_path, excitation_wavelength_nm=functional_wavelength_nm
             )
         )
     )
     conversion_options.update(
-        dict(SegmentationBlue=dict(plane_segmentation_name="plane_segmentation_calcium", stub_test=stub_test))
+        dict(SegmentationCalcium=dict(plane_segmentation_name="plane_segmentation_calcium", stub_test=stub_test))
     )
     source_data.update(
         dict(
-            SegmentationViolet=dict(
+            SegmentationIsosbestic=dict(
                 folder_path=processed_data_dir_path, excitation_wavelength_nm=isosbestic_wavelength_nm
             )
         )
     )
     conversion_options.update(
-        dict(SegmentationViolet=dict(plane_segmentation_name="plane_segmentation_isosbestic", stub_test=stub_test))
+        dict(SegmentationIsosbestic=dict(plane_segmentation_name="plane_segmentation_isosbestic", stub_test=stub_test))
     )
 
     # Add Behavior

@@ -4,7 +4,7 @@ Ophys:
       description: The widefield microscope used to acquire simultaneous dual-wavelength imaging (blue/violet) at ~30 Hz.
   ImagingPlane:
     - name: imaging_plane_calcium # could be also "imaging_plane_calcium" or "imaging_plane_signal" and "control"
-      description: The imaging plane for widefield fluorescence under blue excitation at 470 nm (GCaMP signal).
+      description: The imaging plane for calcium imaging from Blue light excitation.
       excitation_lambda: 470.0  # in nm
       location: unknown # TODO
       indicator: GCaMP6f # Maybe this was only for Mesoscope and not for Widefield
@@ -14,7 +14,7 @@ Ophys:
           description: GCaMP Ca2+ bound emission (calcium signal).
       device: widefield_microscope
     - name: imaging_plane_isosbestic
-      description: The imaging plane for widefield fluorescence under violet excitation at 405 nm (isosbestic control).
+      description: The imaging plane for calcium imaging from Violet light excitation.
       excitation_lambda: 405.0 # in nm
       location: unknown # TODO
       indicator: GCaMP6f
@@ -31,23 +31,23 @@ Ophys:
     plane_segmentation_calcium:
       raw:
         name: roi_response_series
-        description: The raw GCaMP fluorescence traces collected during 470 nm illumination (before hemodynamic correction).
+        description: Raw fluorescence traces for widefield calcium imaging from Blue light (470 nm) excitation.
         unit: n.a.
     plane_segmentation_isosbestic:
       raw:
         name: roi_response_series_isosbestic
-        description: The raw GCaMP fluorescence traces collected at its isosbestic wavelength (405 nm) for heamodynamic correction.
+        description: Raw fluorescence traces for widefield calcium imaging from Violet light (405 nm) excitation.
   DfOverF:
     plane_segmentation_calcium:
       dff:
         name: roi_response_series
-        description: The dF/F traces from the blue (GCaMP) channel, after applying hemodynamic correction.
+        description: Df/F traces for widefield calcium imaging.
   SegmentationImages:
     plane_segmentation_calcium:
       mean:
         name: mean_image
-        description: The mean image under blue (470 nm) excitation across the imaging session.
+        description: The mean image under Blue (470 nm) excitation across the imaging session.
     plane_segmentation_isosbestic:
       mean:
         name: mean_image_isosbestic
-        description: The mean image under violet (405 nm) excitation across the imaging session.
+        description: The mean image under Violet (405 nm) excitation across the imaging session.

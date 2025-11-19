@@ -66,8 +66,9 @@ class WidefieldSegmentationInterface(BaseSegmentationExtractorInterface):
         )
         optical_channel_metadata = imaging_plane_metadata["optical_channel"][0]
         # Additional metadata would be loaded from yaml
-        emission_lambda = np.nan  # Placeholder for now
+        emission_lambda = np.nan  # Placeholder for now (loaded from yaml)
         optical_channel_metadata.update(
+            name=f"green_channel_{suffix}",
             description="Optical channel for calcium imaging",
             emission_lambda=emission_lambda,
         )
