@@ -86,7 +86,7 @@ if __name__ == "__main__":
     processed_data_dir_path = data_dir_path / "alf/widefield"
 
     output_dir_path = Path("/Volumes/T9/data/IBL/nwbfiles")
-    nwbfile_path = output_dir_path / "84565bbe-fd4c-4bdb-af55-968d46a4c424-nidq-aftermerge.nwb"
+    nwbfile_path = output_dir_path / "84565bbe-fd4c-4bdb-af55-968d46a4c424.nwb"
     append_on_disk_nwbfile = False  # Set to True to append to an existing NWB file
 
     functional_wavelength_nm = 470  # The wavelength for functional imaging (e.g. 470 nm)
