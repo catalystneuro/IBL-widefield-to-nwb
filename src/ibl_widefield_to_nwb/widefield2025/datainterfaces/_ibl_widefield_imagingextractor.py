@@ -82,7 +82,7 @@ class WidefieldImagingExtractor(ImagingExtractor):
         self._num_channels = len(np.unique(self._camera_log_metadata["channel_id"]))
 
         suffix = "calcium" if excitation_wavelength_nm == 470 else "isosbestic"
-        self._channel_names = [f"optical_channel_{suffix}"]
+        self._channel_names = [f"green_channel_{suffix}"]
         super().__init__()
 
     def _load_frame_cache(self) -> np.memmap:

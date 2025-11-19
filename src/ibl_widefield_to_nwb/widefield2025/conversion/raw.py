@@ -169,6 +169,17 @@ def convert_raw_session(
     ophys_metadata = load_dict_from_file(ophys_metadata_path)
     metadata = dict_deep_update(metadata, ophys_metadata)
 
+    # Pop Segmentation metadata ('DfOverF', 'Fluorescence', 'ImageSegmentation', 'SegmentationImages')
+    ophys_metadata_to_pop = [
+        "DfOverF",
+        "Fluorescence",
+        "ImageSegmentation",
+        "SegmentationImages",
+    ]
+    for key in ophys_metadata_to_pop:
+        if key in metadata["Ophys"]:
+            metadata["Ophys"].pop(key)
+
     # Update nidq metadata with wiring info
     nidq_metadata_path = Path(__file__).parent.parent / "metadata" / "widefield_nidq_metadata.yaml"
     nidq_metadata = load_dict_from_file(nidq_metadata_path)

@@ -4,15 +4,27 @@ import json
 from pathlib import Path
 from warnings import warn
 
-from neuroconv import BaseDataInterface, ConverterPipe
+from neuroconv import BaseDataInterface, ConverterPipe, NWBConverter
 from pydantic import DirectoryPath
 from pynwb import NWBFile
 
+from ibl_widefield_to_nwb.widefield2025.datainterfaces import (
+    WidefieldSegmentationInterface,
+)
 from ibl_widefield_to_nwb.widefield2025.utils import (
     _apply_channel_name_mapping,
     _create_channel_name_mapping,
     _get_imaging_times_by_excitation_wavelength_nm,
 )
+
+
+class WidefieldProcessedNWBConverter(NWBConverter):
+    """Primary conversion class for Widefield processed data."""
+
+    data_interface_classes = dict(
+        SegmentationCalcium=WidefieldSegmentationInterface,
+        SegmentationIsosbestic=WidefieldSegmentationInterface,
+    )
 
 
 class WidefieldRawNWBConverter(ConverterPipe):
