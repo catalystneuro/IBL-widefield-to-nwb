@@ -154,6 +154,17 @@ def convert_raw_session(
     ophys_metadata = load_dict_from_file(ophys_metadata_path)
     metadata = dict_deep_update(metadata, ophys_metadata)
 
+    # Pop Segmentation metadata ('DfOverF', 'Fluorescence', 'ImageSegmentation', 'SegmentationImages')
+    ophys_metadata_to_pop = [
+        "DfOverF",
+        "Fluorescence",
+        "ImageSegmentation",
+        "SegmentationImages",
+    ]
+    for key in ophys_metadata_to_pop:
+        if key in metadata["Ophys"]:
+            metadata["Ophys"].pop(key)
+
     metadata["Subject"]["subject_id"] = "a_subject_id"  # Modify here or in the yaml file
 
     # ========================================================================
