@@ -92,7 +92,7 @@ if __name__ == "__main__":
     functional_wavelength_nm = 470  # The wavelength for functional imaging (e.g. 470 nm)
     isosbestic_wavelength_nm = 405  # The wavelength for isosbestic imaging (e.g. 405 nm)
 
-    stub_test = True  # Set to True for quick testing with limited data
+    stub_test = False  # Set to True for quick testing with limited data
     session_to_nwb(
         mode="raw",
         nwbfile_path=nwbfile_path,

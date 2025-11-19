@@ -36,6 +36,11 @@ The conversion uses `WidefieldRawNWBConverter`. For each channel converted, the 
 - Data shape written is (time, width, height); frames are converted to grayscale from the source RGB using OpenCV during read.
 - Native timestamps originate from the .camlog entries for the selected channel.
 
+Array shapes and dtype
+- get_series returns an array shaped (time, height, width).
+- The dtype matches the underlying video frame dtype reported by the reader (`uint8`).
+- Frames are converted to grayscale via OpenCV (COLOR_RGB2GRAY) prior to writing.
+
 # NIDQ
 
 ## Expected input folder structure
