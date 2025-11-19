@@ -24,7 +24,8 @@ Repository="https://github.com/catalystneuro/IBL-widefield-to-nwb"
 
 [project.optional-dependencies]
 widefield2025 = [
-  "neuroconv==0.7.0"   # Pinned dependencies to specific versions
+  "neuroconv==0.8.4",
+  "roiextractors==0.7.2",
 ]
 
 [build-system]

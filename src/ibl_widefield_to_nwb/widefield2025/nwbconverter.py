@@ -1,18 +1,16 @@
 """Primary NWBConverter class for this dataset."""
+
 from neuroconv import NWBConverter
-from neuroconv.datainterfaces import (
-    SpikeGLXRecordingInterface,
-    PhySortingInterface,
+
+from ibl_widefield_to_nwb.widefield2025.datainterfaces import (
+    WidefieldSegmentationInterface,
 )
 
-from ibl_widefield_to_nwb.widefield2025 import Widefield2025BehaviorInterface
 
-
-class Widefield2025NWBConverter(NWBConverter):
-    """Primary conversion class for my extracellular electrophysiology dataset."""
+class WidefieldProcessedNWBConverter(NWBConverter):
+    """Primary conversion class for Widefield processed data."""
 
     data_interface_classes = dict(
-        Recording=SpikeGLXRecordingInterface,
-        Sorting=PhySortingInterface,
-        Behavior=Widefield2025BehaviorInterface,
+        SegmentationCalcium=WidefieldSegmentationInterface,
+        SegmentationIsosbestic=WidefieldSegmentationInterface,
     )
