@@ -1,9 +1,16 @@
 """Primary NWBConverter class for this dataset."""
 
+import json
+from pathlib import Path
+from warnings import warn
+
 from neuroconv import BaseDataInterface, ConverterPipe
 from pydantic import DirectoryPath
+from pynwb import NWBFile
 
 from ibl_widefield_to_nwb.widefield2025.utils import (
+    _apply_channel_name_mapping,
+    _create_channel_name_mapping,
     _get_imaging_times_by_excitation_wavelength_nm,
 )
 
@@ -48,3 +55,41 @@ class WidefieldRawNWBConverter(ConverterPipe):
                 light_source_properties_file_path=self._light_source_properties_file_path,
             )
             isosbestic_imaging_interface.imaging_extractor.set_times(times=isosbestic_imaging_times)
+
+    def add_to_nwbfile(self, nwbfile: NWBFile, metadata: dict | None = None, conversion_options: dict | None = None):
+        if "NIDQ" not in self.data_interface_objects:
+            return super().add_to_nwbfile(nwbfile=nwbfile, metadata=metadata, conversion_options=conversion_options)
+
+        nidq_interface = self.data_interface_objects["NIDQ"]
+        recording_extractor = nidq_interface.recording_extractor
+        nidq_data_folder_path = nidq_interface.source_data["folder_path"]
+        nidq_data_folder_path = Path(nidq_data_folder_path)
+        wiring_file_name = "_spikeglx_ephysData_g0_t0.nidq.wiring.json"
+        wiring_file_paths = list(nidq_data_folder_path.parent.rglob(wiring_file_name))
+
+        if len(wiring_file_paths) != 1:
+            warn(
+                f"Expected exactly one wiring json file ('{wiring_file_name}'), found {len(wiring_file_paths)} files. "
+                f"Not applying wiring analog channel filtering based on wiring."
+            )
+            return super().add_to_nwbfile(nwbfile=nwbfile, metadata=metadata, conversion_options=conversion_options)
+
+        wiring_file_path = str(wiring_file_paths[0])
+        wiring = json.load(open(wiring_file_path, "r"))
+
+        channel_name_mapping = _create_channel_name_mapping(wiring=wiring)
+        channel_names = recording_extractor.get_channel_ids()
+        applied = _apply_channel_name_mapping(channel_names, channel_name_mapping)
+        # Rename channels in the recording extractor
+        recording_extractor.set_property(key="channel_names", values=applied)
+
+        # Filter analog channel ids based on wiring json
+        filtered_analog_channel_ids = [
+            channel_id_from_wiring
+            for channel_id_from_wiring in channel_name_mapping.keys()
+            for analog_channel_id in nidq_interface.analog_channel_ids
+            if str(analog_channel_id) in str(channel_id_from_wiring)
+        ]
+        nidq_interface.analog_channel_ids = filtered_analog_channel_ids
+
+        return super().add_to_nwbfile(nwbfile=nwbfile, metadata=metadata, conversion_options=conversion_options)
