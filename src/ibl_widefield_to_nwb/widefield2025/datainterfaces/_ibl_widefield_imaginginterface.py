@@ -2,6 +2,7 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Literal
 
+import numpy as np
 from neuroconv.datainterfaces.ophys.baseimagingextractorinterface import (
     BaseImagingExtractorInterface,
 )
@@ -81,6 +82,11 @@ class WidefieldImagingInterface(BaseImagingExtractorInterface):
         """
         metadata = super().get_metadata()
         metadata_copy = deepcopy(metadata)  # To avoid modifying the parent class's metadata
+
+        device_metadata = metadata_copy["Ophys"]["Device"][0]
+        device_name = "widefield_microscope"
+        device_metadata.update(name=device_name)
+
         imaging_plane_metadata = metadata_copy["Ophys"]["ImagingPlane"][0]
 
         excitation_wavelength = float(self.source_data["excitation_wavelength_nm"])
@@ -89,6 +95,15 @@ class WidefieldImagingInterface(BaseImagingExtractorInterface):
             name=f"imaging_plane_{suffix}",
             excitation_lambda=excitation_wavelength,
             imaging_rate=self.imaging_extractor.get_sampling_frequency(),
+        )
+
+        optical_channel_metadata = imaging_plane_metadata["optical_channel"][0]
+        # Additional metadata would be loaded from yaml
+        emission_lambda = np.nan  # Placeholder for now (loaded from yaml)
+        optical_channel_metadata.update(
+            name=f"green_channel_{suffix}",
+            description="Optical channel for calcium imaging",
+            emission_lambda=emission_lambda,
         )
 
         one_photon_series_metadata = metadata_copy["Ophys"]["OnePhotonSeries"][0]
