@@ -100,7 +100,9 @@ class WidefieldImagingInterface(BaseImagingExtractorInterface):
             raise ValueError(
                 f"No 'ImagingPlane' metadata found for excitation wavelength: {excitation_wavelength} nm. "
             )
-
+        imaging_plane_metadata.update(
+            imaging_rate=float(self.imaging_extractor.get_sampling_frequency()),
+        )
         imaging_plane_name = imaging_plane_metadata["name"]
         one_photon_series_metadata = next(
             (
