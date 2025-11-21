@@ -74,12 +74,14 @@ class WidefieldImagingExtractor(ImagingExtractor):
         channel_id = imaging_light_source_properties["LED"]
         if len(imaging_light_source_properties) == 0:
             raise ValueError(f"No properties found for channel_id '{channel_id}'")
+        self._num_channels = len(np.unique(self._camera_log_metadata["channel_id"]))
+        if self._num_channels != 2:
+            raise ValueError(f"Expected 2 channels in camera log, found {self._num_channels}.")
         # filter for channel_id and compute zero-indexed frame indices
         self._camera_log_metadata = self._camera_log_metadata[
             self._camera_log_metadata["channel_id"] == int(channel_id)
         ].reset_index(drop=True)
         self._frame_indices = self._camera_log_metadata["frame_id"].astype(int).to_numpy() - 1  # zero indexed
-        self._num_channels = len(np.unique(self._camera_log_metadata["channel_id"]))
 
         self._channel_names = ["OpticalChannel"]
         super().__init__()
