@@ -145,25 +145,9 @@ def convert_raw_session(
     metadata["NWBFile"]["session_start_time"] = date
 
     # Update default metadata with the editable in the corresponding yaml file
-    editable_metadata_path = Path(__file__).parent.parent / "metadata" / "widefield_general_metadata.yaml"
+    editable_metadata_path = Path(__file__).parent.parent / "_metadata" / "widefield_general_metadata.yaml"
     editable_metadata = load_dict_from_file(editable_metadata_path)
     metadata = dict_deep_update(metadata, editable_metadata)
-
-    # Update ophys metadata
-    ophys_metadata_path = Path(__file__).parent.parent / "metadata" / "widefield_ophys_metadata.yaml"
-    ophys_metadata = load_dict_from_file(ophys_metadata_path)
-    metadata = dict_deep_update(metadata, ophys_metadata)
-
-    # Pop Segmentation metadata ('DfOverF', 'Fluorescence', 'ImageSegmentation', 'SegmentationImages')
-    ophys_metadata_to_pop = [
-        "DfOverF",
-        "Fluorescence",
-        "ImageSegmentation",
-        "SegmentationImages",
-    ]
-    for key in ophys_metadata_to_pop:
-        if key in metadata["Ophys"]:
-            metadata["Ophys"].pop(key)
 
     metadata["Subject"]["subject_id"] = "a_subject_id"  # Modify here or in the yaml file
 

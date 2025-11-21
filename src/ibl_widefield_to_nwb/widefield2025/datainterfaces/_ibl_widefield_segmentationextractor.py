@@ -59,8 +59,7 @@ class WidefieldSegmentationExtractor(SegmentationExtractor):
         if len(imaging_light_source_properties) == 0:
             raise ValueError(f"No properties found for excitation wavelength '{self.excitation_wavelength_nm}' nm.")
         self.channel_id = imaging_light_source_properties["channel_id"]
-        suffix = "calcium" if excitation_wavelength_nm == 470 else "isosbestic"
-        self._channel_names = [f"green_channel_{suffix}"]
+        self._channel_names = ["OpticalChannel"]
 
         # This is available for both channels
         all_times = self._load_times()
