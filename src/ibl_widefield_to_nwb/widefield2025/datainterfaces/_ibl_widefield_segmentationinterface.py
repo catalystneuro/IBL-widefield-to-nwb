@@ -78,20 +78,20 @@ class WidefieldSegmentationInterface(BaseSegmentationExtractorInterface):
         imaging_plane_name = imaging_plane_metadata["name"]
         plane_segmentation_metadata = next(
             (
-                ps_meta
-                for ps_meta in ophys_metadata["Ophys"]["ImageSegmentation"]["plane_segmentations"]
-                if ps_meta.get("imaging_plane") == imaging_plane_name
+                plane_segmentation_meta
+                for plane_segmentation_meta in ophys_metadata["Ophys"]["ImageSegmentation"]["plane_segmentations"]
+                if plane_segmentation_meta.get("imaging_plane") == imaging_plane_name
             ),
             None,
         )
         if plane_segmentation_metadata is None:
             raise ValueError(f"No 'PlaneSegmentation' metadata found for imaging plane: {imaging_plane_name}. ")
-        plane_segmentation_name = plane_segmentation_metadata["name"]
 
         metadata_copy["Ophys"]["Device"] = ophys_metadata["Ophys"]["Device"]
         metadata_copy["Ophys"]["ImagingPlane"][0].update(imaging_plane_metadata)
         metadata_copy["Ophys"]["ImageSegmentation"]["plane_segmentations"][0].update(plane_segmentation_metadata)
 
+        plane_segmentation_name = plane_segmentation_metadata["name"]
         metadata_copy["Ophys"]["Fluorescence"].update(
             {plane_segmentation_name: ophys_metadata["Ophys"]["Fluorescence"][plane_segmentation_name]}
         )

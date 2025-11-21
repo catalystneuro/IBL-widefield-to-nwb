@@ -104,9 +104,9 @@ class WidefieldImagingInterface(BaseImagingExtractorInterface):
         imaging_plane_name = imaging_plane_metadata["name"]
         one_photon_series_metadata = next(
             (
-                ops_meta
-                for ops_meta in ophys_metadata["Ophys"]["OnePhotonSeries"]
-                if ops_meta.get("imaging_plane") == imaging_plane_name
+                photon_series_meta
+                for photon_series_meta in ophys_metadata["Ophys"]["OnePhotonSeries"]
+                if photon_series_meta.get("imaging_plane") == imaging_plane_name
             ),
             None,
         )
