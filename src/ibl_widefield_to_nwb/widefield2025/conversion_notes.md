@@ -24,17 +24,17 @@ The converter expects exactly one of each of the following files in that folder:
 The conversion uses `WidefieldRawNWBConverter`. For each channel converted, the following NWB structures are created and populated:
 
 1) Ophys/ImagingPlane
-- Name: `imaging_plane_calcium` for 470 nm or `imaging_plane_isosbestic` for 405 nm.
+- Name: `ImagingPlaneCalcium` for 470 nm or `ImagingPlaneIsosbestic` for 405 nm.
 - `excitation_lambda` is set from the .htsv properties for the selected LED (wavelength, in nm).
 - `imaging_rate` is set from the per-channel sampling frequency (half of camera FPS due to interleaving).
-- Device and optical channel metadata are taken from `metadata/widefield_ophys_metadata.yaml` and updated by the interface to match the channel.
+- Device and optical channel metadata are taken from `_metadata/widefield_ophys_metadata.yaml` and updated by the interface to match the excitation wavelength.
 
 2) Ophys/OnePhotonSeries
-- Name: `one_photon_series_calcium` for 470 nm or `one_photon_series_isosbestic` for 405 nm.
+- Name: `OnePhotonSeriesCalcium` for 470 nm or `OnePhotonSeriesIsosbestic` for 405 nm.
 - `imaging_plane` is linked to the corresponding ImagingPlane above.
-- unit is set to "px".
 - Data shape written is (time, width, height); frames are converted to grayscale from the source RGB using OpenCV during read.
 - Native timestamps originate from the .camlog entries for the selected channel.
+- Aligned timestamps are taken from the processed data (`imaging.times.npy` filtered by the excitation wavelength).
 
 Array shapes and dtype
 - get_series returns an array shaped (time, height, width).
@@ -117,25 +117,25 @@ Notes:
 The conversion uses `WidefieldProcessedNWBConverter`. For each channel converted, the following NWB structures are created and populated:
 
 1) Ophys/ImagingPlane
-- Name: `imaging_plane_calcium` for 470 nm or `imaging_plane_isosbestic` for 405 nm.
+- Name: `ImagingPlaneCalcium` for 470 nm or `ImagingPlaneIsosbestic` for 405 nm.
 - `excitation_lambda` set from `imagingLightSource.properties.wavelength`.
-- `emission_lambda` set from  metadata YAML (`metadata/widefield_ophys_metadata.yaml`).
+- `emission_lambda` set from metadata YAML (`_metadata/widefield_ophys_metadata.yaml`).
 
 2) Ophys/PlaneSegmentation
-- Name: `plane_segmentation_calcium` for 470 nm or `plane_segmentation_isosbestic` for 405 nm.
+- Name: `PlaneSegmentationCalcium` for 470 nm or `PlaneSegmentationIsosbestic` for 405 nm.
 - Descriptions include the channel color.
-- The ImagingPlane reference is linked to the corresponding ImagingPlane created above.
+- The `imaging_plane` reference is linked to the corresponding ImagingPlane created above.
 
 3) Ophys/Fluorescence (ROIResponseSeries for raw/unprocessed fluorescence)
 - For each channel, a ROIResponseSeries named:
-  - `roi_response_series` for 470 nm
-  - `roi_response_series_isosbestic` for 405 nm
+  - `RoiResponseSeries` for 470 nm
+  - `RoiResponseSeriesIsosbestic` for 405 nm
 - The uncorrected array (widefieldSVT.uncorrected...) is filtered to the frames that belong to the channel (using imaging.imagingLightSource), then transposed to time x ROI and written with the per-channel timestamps from imaging.times.
 
 4) Ophys/DfOverF (ROIResponseSeries for dF/F)
-- Only for the 470 nm functional channel, a ROIResponseSeries named `roi_response_series` is created under DfOverF, using the haemodynamically corrected signals from widefieldSVT.haemoCorrected..., filtered to frames for that channel and transposed to time x ROI.
+- Only available for the 470 nm functional channel, a ROIResponseSeries named `RoiResponseSeries` is created under DfOverF, using the haemodynamically corrected signals from widefieldSVT.haemoCorrected..., and transposed to time x ROI.
 
 5) Ophys/SegmentationImages
-- For each channel, the following images are written under the PlaneSegmentation key for that channel:
-  - `mean_calcium` or `mean_isosbestic` from widefieldChannels.frameAverage
+- For each excitation wavelength, the following images are written under the PlaneSegmentation key for that wavelength:
+  - `MeanImage` or `MeanImageIsosbestic` from widefieldChannels.frameAverage
   - image masks from widefieldU.images... are written as binary/float masks per ROI.

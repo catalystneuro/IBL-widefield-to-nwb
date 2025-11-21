@@ -1,60 +1,65 @@
 Ophys:
   Device:
-    - name: widefield_microscope
+    - name: WidefieldMicroscope
       description: The widefield microscope used to acquire simultaneous dual-wavelength imaging (blue/violet) at ~30 Hz.
   ImagingPlane:
-    - name: imaging_plane_calcium # could be also "imaging_plane_calcium" or "imaging_plane_signal" and "control"
+    - name: ImagingPlaneCalcium
       description: The imaging plane for calcium imaging from Blue light excitation.
       excitation_lambda: 470.0  # in nm
       location: unknown # TODO
       indicator: GCaMP6f # Maybe this was only for Mesoscope and not for Widefield
       optical_channel:
-        - name: green_channel_calcium
+        - name: OpticalChannel
           emission_lambda: 510.0  # in nm (peak emission wavelength)  # TODO
           description: GCaMP Ca2+ bound emission (calcium signal). (Thorlabs, cat. no. M470L4)
-      device: widefield_microscope
-    - name: imaging_plane_isosbestic
+      device: WidefieldMicroscope
+    - name: ImagingPlaneIsosbestic
       description: The imaging plane for calcium imaging from Violet light excitation.
       excitation_lambda: 405.0 # in nm
       location: unknown # TODO
       indicator: GCaMP6f
       optical_channel:
-        - name: green_channel_isosbestic
+        - name: OpticalChannel
           emission_lambda: 510.0  # in nm (peak emission wavelength)  # TODO
           description:  GCaMP Ca2+ independent emission (isosbestic signal). (Thorlabs, cat. no. M405L4)
-      device: widefield_microscope
+      device: WidefieldMicroscope
   OnePhotonSeries:
-    - name: one_photon_series_calcium
+    - name: OnePhotonSeriesCalcium
       description: Widefield raw imaging under blue excitation at 470 nm (GCaMP signal).
-      imaging_plane: imaging_plane_calcium
-    - name: one_photon_series_isosbestic
+      imaging_plane: ImagingPlaneCalcium
+    - name: OnePhotonSeriesIsosbestic
       description: Widefield raw imaging under violet excitation at 405 nm (isosbestic control).
-      imaging_plane: imaging_plane_isosbestic
+      imaging_plane: ImagingPlaneIsosbestic
   ImageSegmentation:
     plane_segmentations:
-      - name: plane_segmentation_calcium
-      - name: plane_segmentation_isosbestic
+      - name: PlaneSegmentationCalcium
+        description: Spatial components of segmented ROIs for widefield calcium imaging.
+        imaging_plane: ImagingPlaneCalcium
+      - name: PlaneSegmentationIsosbestic
+        description: Spatial components of segmented ROIs for widefield calcium imaging.
+        imaging_plane: ImagingPlaneIsosbestic
   Fluorescence:
-    plane_segmentation_calcium:
+    PlaneSegmentationCalcium:
       raw:
-        name: roi_response_series
+        name: RoiResponseSeries
         description: Raw fluorescence traces for widefield calcium imaging from Blue light (470 nm) excitation.
         unit: n.a.
-    plane_segmentation_isosbestic:
+    PlaneSegmentationIsosbestic:
       raw:
-        name: roi_response_series_isosbestic
+        name: RoiResponseSeriesIsosbestic
         description: Raw fluorescence traces for widefield calcium imaging from Violet light (405 nm) excitation.
+        unit: n.a.
   DfOverF:
-    plane_segmentation_calcium:
+    PlaneSegmentationCalcium:
       dff:
-        name: roi_response_series
+        name: RoiResponseSeries
         description: Df/F traces for widefield calcium imaging.
   SegmentationImages:
-    plane_segmentation_calcium:
+    PlaneSegmentationCalcium:
       mean:
-        name: mean_image
+        name: MeanImage
         description: The mean image under Blue (470 nm) excitation across the imaging session.
-    plane_segmentation_isosbestic:
+    PlaneSegmentationIsosbestic:
       mean:
-        name: mean_image_isosbestic
+        name: MeanImageIsosbestic
         description: The mean image under Violet (405 nm) excitation across the imaging session.

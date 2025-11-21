@@ -67,7 +67,7 @@ def convert_processed_session(
         )
     )
     conversion_options.update(
-        dict(SegmentationCalcium=dict(plane_segmentation_name="plane_segmentation_calcium", stub_test=stub_test))
+        dict(SegmentationCalcium=dict(plane_segmentation_name="PlaneSegmentationCalcium", stub_test=stub_test))
     )
     source_data.update(
         dict(
@@ -77,7 +77,7 @@ def convert_processed_session(
         )
     )
     conversion_options.update(
-        dict(SegmentationIsosbestic=dict(plane_segmentation_name="plane_segmentation_isosbestic", stub_test=stub_test))
+        dict(SegmentationIsosbestic=dict(plane_segmentation_name="PlaneSegmentationIsosbestic", stub_test=stub_test))
     )
 
     # Add Behavior
@@ -92,22 +92,9 @@ def convert_processed_session(
     metadata["NWBFile"]["session_start_time"] = date
 
     # Update default metadata with the editable in the corresponding yaml file
-    editable_metadata_path = Path(__file__).parent.parent / "metadata" / "widefield_general_metadata.yaml"
+    editable_metadata_path = Path(__file__).parent.parent / "_metadata" / "widefield_general_metadata.yaml"
     editable_metadata = load_dict_from_file(editable_metadata_path)
     metadata = dict_deep_update(metadata, editable_metadata)
-
-    # Update ophys metadata
-    ophys_metadata_path = Path(__file__).parent.parent / "metadata" / "widefield_ophys_metadata.yaml"
-    ophys_metadata = load_dict_from_file(ophys_metadata_path)
-    metadata = dict_deep_update(metadata, ophys_metadata)
-
-    # Pop Raw ophys metadata ('OnePhotonSeries')
-    ophys_metadata_to_pop = [
-        "OnePhotonSeries",
-    ]
-    for key in ophys_metadata_to_pop:
-        if key in metadata["Ophys"]:
-            metadata["Ophys"].pop(key)
 
     metadata["Subject"]["subject_id"] = "a_subject_id"  # Modify here or in the yaml file
     metadata["NWBFile"]["session_id"] = session_id
