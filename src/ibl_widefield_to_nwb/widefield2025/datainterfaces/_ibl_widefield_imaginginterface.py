@@ -2,11 +2,10 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Literal
 
-import numpy as np
 from neuroconv.datainterfaces.ophys.baseimagingextractorinterface import (
     BaseImagingExtractorInterface,
 )
-from neuroconv.utils import DeepDict
+from neuroconv.utils import DeepDict, load_dict_from_file
 from pydantic import DirectoryPath
 
 from ibl_widefield_to_nwb.widefield2025.datainterfaces._ibl_widefield_imagingextractor import (
@@ -72,7 +71,7 @@ class WidefieldImagingInterface(BaseImagingExtractorInterface):
 
     def get_metadata(self) -> DeepDict:
         """
-        Get metadata for the Miniscope imaging data.
+        Get metadata for the Widefield raw imaging.
 
         Returns
         -------
@@ -81,36 +80,41 @@ class WidefieldImagingInterface(BaseImagingExtractorInterface):
             and one-photon series configuration.
         """
         metadata = super().get_metadata()
-        metadata_copy = deepcopy(metadata)  # To avoid modifying the parent class's metadata
+        metadata_copy = deepcopy(metadata)
 
-        device_metadata = metadata_copy["Ophys"]["Device"][0]
-        device_name = "widefield_microscope"
-        device_metadata.update(name=device_name)
-
-        imaging_plane_metadata = metadata_copy["Ophys"]["ImagingPlane"][0]
+        # Use single source of truth when updating metadata
+        ophys_metadata = load_dict_from_file(
+            file_path=Path(__file__).parent.parent / "_metadata" / "widefield_ophys_metadata.yaml"
+        )
 
         excitation_wavelength = float(self.source_data["excitation_wavelength_nm"])
-        suffix = "calcium" if excitation_wavelength == 470.0 else "isosbestic"
-        imaging_plane_metadata.update(
-            name=f"imaging_plane_{suffix}",
-            excitation_lambda=excitation_wavelength,
-            imaging_rate=self.imaging_extractor.get_sampling_frequency(),
+        imaging_plane_metadata = next(
+            (
+                imaging_plane_meta
+                for imaging_plane_meta in ophys_metadata["Ophys"]["ImagingPlane"]
+                if imaging_plane_meta.get("excitation_lambda") == excitation_wavelength
+            ),
+            None,
         )
+        if imaging_plane_metadata is None:
+            raise ValueError(
+                f"No 'ImagingPlane' metadata found for excitation wavelength: {excitation_wavelength} nm. "
+            )
 
-        optical_channel_metadata = imaging_plane_metadata["optical_channel"][0]
-        # Additional metadata would be loaded from yaml
-        emission_lambda = np.nan  # Placeholder for now (loaded from yaml)
-        optical_channel_metadata.update(
-            name=f"green_channel_{suffix}",
-            description="Optical channel for calcium imaging",
-            emission_lambda=emission_lambda,
+        imaging_plane_name = imaging_plane_metadata["name"]
+        one_photon_series_metadata = next(
+            (
+                ops_meta
+                for ops_meta in ophys_metadata["Ophys"]["OnePhotonSeries"]
+                if ops_meta.get("imaging_plane") == imaging_plane_name
+            ),
+            None,
         )
+        if one_photon_series_metadata is None:
+            raise ValueError(f"No 'OnePhotonSeries' metadata found for imaging plane: {imaging_plane_name}. ")
 
-        one_photon_series_metadata = metadata_copy["Ophys"]["OnePhotonSeries"][0]
-        one_photon_series_metadata.update(
-            name=f"one_photon_series_{suffix}",
-            imaging_plane=imaging_plane_metadata["name"],
-            unit="px",
-        )
+        metadata_copy["Ophys"]["Device"] = ophys_metadata["Ophys"]["Device"]
+        metadata_copy["Ophys"]["ImagingPlane"][0].update(imaging_plane_metadata)
+        metadata_copy["Ophys"]["OnePhotonSeries"][0].update(one_photon_series_metadata)
 
         return metadata_copy
