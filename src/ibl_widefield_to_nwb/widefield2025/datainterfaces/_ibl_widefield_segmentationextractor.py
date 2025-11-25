@@ -8,13 +8,13 @@ from roiextractors import SegmentationExtractor
 from roiextractors.segmentationextractor import _ROIMasks, _RoiResponse
 
 
-class WidefieldSegmentationExtractor(SegmentationExtractor):
+class WidefieldSVDExtractor(SegmentationExtractor):
     """A segmentation extractor for IBL Widefield processed data."""
 
-    extractor_name = "WidefieldSegmentationExtractor"
+    extractor_name = "WidefieldSVDExtractor"
 
     def __init__(self, folder_path: DirectoryPath, excitation_wavelength_nm: int):
-        """Initialize a WidefieldSegmentationExtractor instance.
+        """Initialize a WidefieldSVDExtractor instance.
 
         Main class for extracting segmentation data from .npy format.
 

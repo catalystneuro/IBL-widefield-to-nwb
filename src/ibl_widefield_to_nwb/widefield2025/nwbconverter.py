@@ -4,7 +4,7 @@ from neuroconv import BaseDataInterface, ConverterPipe, NWBConverter
 from pydantic import DirectoryPath
 
 from ibl_widefield_to_nwb.widefield2025.datainterfaces import (
-    WidefieldSegmentationInterface,
+    WidefieldSVDInterface,
 )
 from ibl_widefield_to_nwb.widefield2025.utils import (
     _get_imaging_times_by_excitation_wavelength_nm,
@@ -15,8 +15,8 @@ class WidefieldProcessedNWBConverter(NWBConverter):
     """Primary conversion class for Widefield processed data."""
 
     data_interface_classes = dict(
-        SegmentationCalcium=WidefieldSegmentationInterface,
-        SegmentationIsosbestic=WidefieldSegmentationInterface,
+        SegmentationCalcium=WidefieldSVDInterface,
+        SegmentationIsosbestic=WidefieldSVDInterface,
     )
 
 

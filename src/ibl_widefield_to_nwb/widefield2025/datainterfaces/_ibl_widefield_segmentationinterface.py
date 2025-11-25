@@ -8,11 +8,11 @@ from neuroconv.utils import DeepDict, load_dict_from_file
 from pydantic import DirectoryPath
 
 from ibl_widefield_to_nwb.widefield2025.datainterfaces._ibl_widefield_segmentationextractor import (
-    WidefieldSegmentationExtractor,
+    WidefieldSVDExtractor,
 )
 
 
-class WidefieldSegmentationInterface(BaseSegmentationExtractorInterface):
+class WidefieldSVDInterface(BaseSegmentationExtractorInterface):
     """Data interface for IBL Widefield processed data."""
 
     display_name = "IBL Widefield Segmentation"
@@ -21,7 +21,7 @@ class WidefieldSegmentationInterface(BaseSegmentationExtractorInterface):
 
     @classmethod
     def get_extractor_class(cls):
-        return WidefieldSegmentationExtractor
+        return WidefieldSVDExtractor
 
     def __init__(
         self,
