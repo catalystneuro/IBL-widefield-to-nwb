@@ -225,7 +225,7 @@ class WidefieldSegmentationExtractor(SegmentationExtractor):
                 dff_traces = self._load_roi_response_dff()
                 # This is again (num_rois, num_timepoints), we transpose to (num_timepoints, num_rois)
                 dff_traces = dff_traces.T
-                self._roi_responses.append(_RoiResponse("dff", dff_traces, list(cell_ids)))
+                self._roi_responses.append(_RoiResponse("haemocorrected", dff_traces, list(cell_ids)))
 
         return self._roi_responses
 
