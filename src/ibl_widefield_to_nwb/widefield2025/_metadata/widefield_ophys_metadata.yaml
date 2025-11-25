@@ -57,6 +57,7 @@ Ophys:
         unit: n.a.
   SegmentationImages:
     name: SummaryImages
+    description: Summary images for widefield calcium imaging.
     SVDTemporalComponentsCalcium:
       mean:
         name: MeanImage

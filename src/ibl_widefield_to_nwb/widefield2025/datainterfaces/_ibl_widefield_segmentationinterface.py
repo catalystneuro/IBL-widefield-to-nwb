@@ -102,6 +102,7 @@ class WidefieldSVDInterface(BaseSegmentationExtractorInterface):
         metadata_copy["Ophys"]["SegmentationImages"].update(
             {plane_segmentation_name: ophys_metadata["Ophys"]["SegmentationImages"][plane_segmentation_name]},
             name=ophys_metadata["Ophys"]["SegmentationImages"]["name"],
+            description=ophys_metadata["Ophys"]["SegmentationImages"]["description"],
         )
 
         return metadata_copy
