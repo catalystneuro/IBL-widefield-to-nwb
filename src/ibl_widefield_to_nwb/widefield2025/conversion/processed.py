@@ -67,7 +67,7 @@ def convert_processed_session(
         )
     )
     conversion_options.update(
-        dict(SegmentationCalcium=dict(plane_segmentation_name="PlaneSegmentationCalcium", stub_test=stub_test))
+        dict(SegmentationCalcium=dict(plane_segmentation_name="SVDTemporalComponentsCalcium", stub_test=stub_test))
     )
     source_data.update(
         dict(
@@ -77,7 +77,9 @@ def convert_processed_session(
         )
     )
     conversion_options.update(
-        dict(SegmentationIsosbestic=dict(plane_segmentation_name="PlaneSegmentationIsosbestic", stub_test=stub_test))
+        dict(
+            SegmentationIsosbestic=dict(plane_segmentation_name="SVDTemporalComponentsIsosbestic", stub_test=stub_test)
+        )
     )
 
     # Add Behavior
