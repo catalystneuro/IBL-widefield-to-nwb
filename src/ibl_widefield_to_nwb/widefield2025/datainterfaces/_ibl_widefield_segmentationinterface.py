@@ -91,16 +91,17 @@ class WidefieldSegmentationInterface(BaseSegmentationExtractorInterface):
         metadata_copy["Ophys"]["ImagingPlane"][0].update(imaging_plane_metadata)
         metadata_copy["Ophys"]["ImageSegmentation"]["plane_segmentations"][0].update(plane_segmentation_metadata)
 
+        image_segmentation_name = ophys_metadata["Ophys"]["ImageSegmentation"]["name"]
+        metadata_copy["Ophys"]["ImageSegmentation"].update(name=image_segmentation_name)
+
         plane_segmentation_name = plane_segmentation_metadata["name"]
         metadata_copy["Ophys"]["Fluorescence"].update(
-            {plane_segmentation_name: ophys_metadata["Ophys"]["Fluorescence"][plane_segmentation_name]}
+            {plane_segmentation_name: ophys_metadata["Ophys"]["Fluorescence"][plane_segmentation_name]},
+            name=ophys_metadata["Ophys"]["Fluorescence"]["name"],
         )
         metadata_copy["Ophys"]["SegmentationImages"].update(
-            {plane_segmentation_name: ophys_metadata["Ophys"]["SegmentationImages"][plane_segmentation_name]}
+            {plane_segmentation_name: ophys_metadata["Ophys"]["SegmentationImages"][plane_segmentation_name]},
+            name=ophys_metadata["Ophys"]["SegmentationImages"]["name"],
         )
-        if "Calcium" in plane_segmentation_name:
-            metadata_copy["Ophys"]["DfOverF"].update(
-                {plane_segmentation_name: ophys_metadata["Ophys"]["DfOverF"][plane_segmentation_name]}
-            )
 
         return metadata_copy
