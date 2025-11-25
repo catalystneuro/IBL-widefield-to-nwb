@@ -66,8 +66,17 @@ def convert_processed_session(
             )
         )
     )
+    processed_data_conversion_options = dict(
+        stub_test=stub_test,
+        include_roi_centroids=False,
+        include_roi_acceptance=False,
+    )
     conversion_options.update(
-        dict(SegmentationCalcium=dict(plane_segmentation_name="SVDTemporalComponentsCalcium", stub_test=stub_test))
+        dict(
+            SegmentationCalcium=dict(
+                plane_segmentation_name="SVDTemporalComponentsCalcium", **processed_data_conversion_options
+            )
+        )
     )
     source_data.update(
         dict(
@@ -78,7 +87,9 @@ def convert_processed_session(
     )
     conversion_options.update(
         dict(
-            SegmentationIsosbestic=dict(plane_segmentation_name="SVDTemporalComponentsIsosbestic", stub_test=stub_test)
+            SegmentationIsosbestic=dict(
+                plane_segmentation_name="SVDTemporalComponentsIsosbestic", **processed_data_conversion_options
+            )
         )
     )
 
