@@ -31,35 +31,37 @@ Ophys:
       description: Widefield raw imaging under violet excitation at 405 nm (isosbestic control).
       imaging_plane: ImagingPlaneIsosbestic
   ImageSegmentation:
+    name: SVDSpatialComponents
     plane_segmentations:
-      - name: PlaneSegmentationCalcium
-        description: Spatial components of segmented ROIs for widefield calcium imaging.
+      - name: SVDTemporalComponentsCalcium
+        description: Spatial components for widefield calcium imaging.
         imaging_plane: ImagingPlaneCalcium
-      - name: PlaneSegmentationIsosbestic
-        description: Spatial components of segmented ROIs for widefield calcium imaging.
+      - name: SVDTemporalComponentsIsosbestic
+        description: Spatial components for widefield calcium imaging.
         imaging_plane: ImagingPlaneIsosbestic
   Fluorescence:
-    PlaneSegmentationCalcium:
+    name: SVDTemporalComponents
+    SVDTemporalComponentsCalcium:
       raw:
-        name: RoiResponseSeries
-        description: Raw fluorescence traces for widefield calcium imaging from Blue light (470 nm) excitation.
+        name: DenoisedSVDTemporalComponentsCalcium
+        description: SVD temporal components (denoised/decomposed) of widefield calcium imaging from Blue light (470 nm) excitation.
         unit: n.a.
-    PlaneSegmentationIsosbestic:
+      haemocorrected:
+        name: HaemoCorrectedSVDTemporalComponentsCalcium
+        description: Haemodynamic corrected SVD temporal components of widefield calcium imaging from Blue light (470 nm) excitation.
+        unit: n.a.
+    SVDTemporalComponentsIsosbestic:
       raw:
-        name: RoiResponseSeriesIsosbestic
-        description: Raw fluorescence traces for widefield calcium imaging from Violet light (405 nm) excitation.
+        name: DenoisedSVDTemporalComponentsIsosbestic
+        description: SVD temporal components (denoised/decomposed) of widefield calcium imaging from Violet light (405 nm) excitation.
         unit: n.a.
-  DfOverF:
-    PlaneSegmentationCalcium:
-      dff:
-        name: RoiResponseSeries
-        description: Df/F traces for widefield calcium imaging.
   SegmentationImages:
-    PlaneSegmentationCalcium:
+    name: SummaryImages
+    SVDTemporalComponentsCalcium:
       mean:
         name: MeanImage
         description: The mean image under Blue (470 nm) excitation across the imaging session.
-    PlaneSegmentationIsosbestic:
+    SVDTemporalComponentsIsosbestic:
       mean:
         name: MeanImageIsosbestic
         description: The mean image under Violet (405 nm) excitation across the imaging session.
