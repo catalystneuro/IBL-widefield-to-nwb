@@ -1,16 +1,20 @@
 """Primary script to run to convert an entire session for of data using the NWBConverter."""
 
 import datetime
+import json
 import time
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from neuroconv.datainterfaces import SpikeGLXNIDQInterface
-from neuroconv.utils import dict_deep_update, load_dict_from_file
 from pynwb import read_nwb
 
 from ibl_widefield_to_nwb.widefield2025 import WidefieldRawNWBConverter
 from ibl_widefield_to_nwb.widefield2025.datainterfaces import WidefieldImagingInterface
+from ibl_widefield_to_nwb.widefield2025.utils import (
+    _get_analog_channel_groups_from_wiring,
+)
+from neuroconv.datainterfaces import SpikeGLXNIDQInterface
+from neuroconv.utils import dict_deep_update, load_dict_from_file
 
 
 def convert_raw_session(
@@ -125,9 +129,21 @@ def convert_raw_session(
     )
 
     # Add NIDQ
+    wiring_file_name = "_spikeglx_ephysData_g0_t0.nidq.wiring.json"
+    wiring_file_paths = list(nidq_data_dir_path.parent.glob(wiring_file_name))
+    if len(wiring_file_paths) != 1:
+        raise FileNotFoundError(
+            f"Expected exactly one wiring json file ('{wiring_file_name}'), found {len(wiring_file_paths)} files."
+        )
+    wiring_file_path = str(wiring_file_paths[0])
+    wiring = json.load(open(wiring_file_path, "r"))
+
+    analog_channel_groups = _get_analog_channel_groups_from_wiring(wiring=wiring)
     nidq_interface = SpikeGLXNIDQInterface(
         folder_path=nidq_data_dir_path,
+        analog_channel_groups=analog_channel_groups,
     )
+
     data_interfaces.update(NIDQ=nidq_interface)
     conversion_options.update(
         dict(
@@ -165,7 +181,7 @@ def convert_raw_session(
     metadata = dict_deep_update(metadata, editable_metadata)
 
     # Update ophys metadata
-    ophys_metadata_path = Path(__file__).parent.parent / "metadata" / "widefield_ophys_metadata.yaml"
+    ophys_metadata_path = Path(__file__).parent.parent / "_metadata" / "widefield_ophys_metadata.yaml"
     ophys_metadata = load_dict_from_file(ophys_metadata_path)
     metadata = dict_deep_update(metadata, ophys_metadata)
 
@@ -181,7 +197,7 @@ def convert_raw_session(
             metadata["Ophys"].pop(key)
 
     # Update nidq metadata with wiring info
-    nidq_metadata_path = Path(__file__).parent.parent / "metadata" / "widefield_nidq_metadata.yaml"
+    nidq_metadata_path = Path(__file__).parent.parent / "_metadata" / "widefield_nidq_metadata.yaml"
     nidq_metadata = load_dict_from_file(nidq_metadata_path)
     metadata = dict_deep_update(metadata, nidq_metadata)
 

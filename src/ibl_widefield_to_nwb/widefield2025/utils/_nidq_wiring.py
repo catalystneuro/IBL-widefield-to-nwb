@@ -1,5 +1,5 @@
-# These functions are copied from https://github.com/h-mayorquin/IBL-to-nwb/blob/d7303e64194ad6b56fc0e51eee9d1aa71607ce62/src/ibl_to_nwb/utils/nidq_wiring.py
-# create_channel_name_mapping function was modified to include 'nidq#' prefix in channel IDs
+# The create_channel_name_mapping function was copied from https://github.com/h-mayorquin/IBL-to-nwb/blob/d7303e64194ad6b56fc0e51eee9d1aa71607ce62/src/ibl_to_nwb/utils/nidq_wiring.py
+# The method was renamed to _create_channel_name_mapping and modified to include 'nidq#' prefix in channel IDs
 
 
 def _create_channel_name_mapping(wiring: dict | None) -> dict[str, str]:
@@ -60,31 +60,26 @@ def _create_channel_name_mapping(wiring: dict | None) -> dict[str, str]:
     return channel_mapping
 
 
-def _apply_channel_name_mapping(channel_ids: list[str], channel_mapping: dict[str, str]) -> list[str]:
+def _get_analog_channel_groups_from_wiring(wiring: dict[str, str]) -> dict[str, list[str]]:
     """
-    Apply channel name mapping to a list of channel IDs.
+    Get analog channel groups from wiring configuration.
 
-    Replaces technical SpikeGLX channel IDs with meaningful device names from
-    the wiring configuration. If a channel ID has no mapping, it's kept as-is.
 
     Parameters
     ----------
-    channel_ids : list[str]
-        List of SpikeGLX channel IDs (e.g., ['XD0', 'XD1', 'XA0'])
-    channel_mapping : dict[str, str]
-        Mapping from create_channel_name_mapping()
+    wiring: dict[str, str]
+        Wiring configuration from `_spikeglx_ephysData_g0_t0.nidq.wiring.json` file loaded as a dictionary.
 
     Returns
     -------
-    list[str]
-        List of device names (e.g., ['left_camera', 'right_camera', 'bpod'])
-        Unmapped channels keep their original IDs.
+    dict[str, list[str]]
+        Mapping from device names to lists of SpikeGLX analog channel IDs that are specified in the wiring configuration.
+        Example: {'bpod': ['nidq#XA0']}
 
-    Examples
-    --------
-    >>> channel_ids = ['XD0', 'XD1', 'XA0', 'XD999']
-    >>> mapping = {'XD0': 'left_camera', 'XD1': 'right_camera', 'XA0': 'bpod'}
-    >>> apply_channel_name_mapping(channel_ids, mapping)
-    ['left_camera', 'right_camera', 'bpod', 'XD999']
     """
-    return [channel_mapping.get(ch_id, ch_id) for ch_id in channel_ids]
+    channel_name_mapping = _create_channel_name_mapping(wiring=wiring)
+    analog_channel_groups = {}
+    for k, v in channel_name_mapping.items():
+        if "nidq#XA" in k:
+            analog_channel_groups.setdefault(v, []).append(k)
+    return analog_channel_groups

@@ -1,6 +1,7 @@
 # Analog signals metadata
 TimeSeries:
   SpikeGLXNIDQ:
+    bpod:
       name: "TimeSeriesBpod"
       description:  |
         Analog signal from Bpod behavioral control system.
