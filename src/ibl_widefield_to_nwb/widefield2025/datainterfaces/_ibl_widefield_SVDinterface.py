@@ -7,7 +7,7 @@ from neuroconv.datainterfaces.ophys.basesegmentationextractorinterface import (
 from neuroconv.utils import DeepDict, load_dict_from_file
 from pydantic import DirectoryPath
 
-from ibl_widefield_to_nwb.widefield2025.datainterfaces._ibl_widefield_segmentationextractor import (
+from ibl_widefield_to_nwb.widefield2025.datainterfaces._ibl_widefield_SVDextractor import (
     WidefieldSVDExtractor,
 )
 
@@ -34,7 +34,7 @@ class WidefieldSVDInterface(BaseSegmentationExtractorInterface):
         Parameters
         ----------
         folder_path : DirectoryPath
-            Path to the folder containing the segmentation data.
+            Path to the folder containing the processed Widefield data.
         excitation_wavelength_nm : int
             The excitation wavelength (in nm) for the channel to load.
         verbose : bool, default : False
@@ -45,7 +45,7 @@ class WidefieldSVDInterface(BaseSegmentationExtractorInterface):
 
     def get_metadata(self) -> DeepDict:
         """
-        Get metadata for the Widefield segmentation.
+        Get metadata for the Widefield SVD data.
 
         Returns
         -------

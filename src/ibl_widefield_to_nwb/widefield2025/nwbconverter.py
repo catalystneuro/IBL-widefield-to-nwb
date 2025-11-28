@@ -15,8 +15,8 @@ class WidefieldProcessedNWBConverter(NWBConverter):
     """Primary conversion class for Widefield processed data."""
 
     data_interface_classes = dict(
-        SegmentationCalcium=WidefieldSVDInterface,
-        SegmentationIsosbestic=WidefieldSVDInterface,
+        SVDCalcium=WidefieldSVDInterface,
+        SVDIsosbestic=WidefieldSVDInterface,
     )
 
 

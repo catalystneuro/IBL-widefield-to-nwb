@@ -60,11 +60,7 @@ def convert_processed_session(
 
     # Add Segmentation
     source_data.update(
-        dict(
-            SegmentationCalcium=dict(
-                folder_path=processed_data_dir_path, excitation_wavelength_nm=functional_wavelength_nm
-            )
-        )
+        dict(SVDCalcium=dict(folder_path=processed_data_dir_path, excitation_wavelength_nm=functional_wavelength_nm))
     )
     processed_data_conversion_options = dict(
         stub_test=stub_test,
@@ -73,21 +69,15 @@ def convert_processed_session(
     )
     conversion_options.update(
         dict(
-            SegmentationCalcium=dict(
-                plane_segmentation_name="SVDTemporalComponentsCalcium", **processed_data_conversion_options
-            )
+            SVDCalcium=dict(plane_segmentation_name="SVDTemporalComponentsCalcium", **processed_data_conversion_options)
         )
     )
     source_data.update(
-        dict(
-            SegmentationIsosbestic=dict(
-                folder_path=processed_data_dir_path, excitation_wavelength_nm=isosbestic_wavelength_nm
-            )
-        )
+        dict(SVDIsosbestic=dict(folder_path=processed_data_dir_path, excitation_wavelength_nm=isosbestic_wavelength_nm))
     )
     conversion_options.update(
         dict(
-            SegmentationIsosbestic=dict(
+            SVDIsosbestic=dict(
                 plane_segmentation_name="SVDTemporalComponentsIsosbestic", **processed_data_conversion_options
             )
         )
