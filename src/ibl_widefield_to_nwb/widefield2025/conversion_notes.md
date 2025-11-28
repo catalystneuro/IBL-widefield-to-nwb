@@ -7,6 +7,9 @@
   - [How data are written to NWB (raw)](#raw-how-data-written)
   - [Array shapes and dtype](#array-shapes-and-dtype)
   - [Example metadata (raw)](#example-metadata-raw)
+- [NIDQ](#nidq)
+  - [Expected input folder structure (NIDQ)](#nidq-expected-input)
+  - [How data are written to NWB (NIDQ)](#nidq-how-data-written)
 - [Converting processed IBL widefield data to NWB format](#converting-processed-ibl-widefield-data-to-nwb-format)
   - [Expected input folder structure (processed)](#processed-expected-input)
   - [How data are written to NWB (processed)](#processed-how-data-written)
@@ -89,9 +92,10 @@ Ophys:
       imaging_plane: ImagingPlaneIsosbestic
 ```
 
-<a name="processed-expected-input"></a>
+<a name="nidq"></a>
 # NIDQ
 
+<a name="nidq-expected-input"></a>
 ## Expected input folder structure
 The `SpikeGLXNIDQInterface` expects exactly one of each of the following files in that folder:
 
