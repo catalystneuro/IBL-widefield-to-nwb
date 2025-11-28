@@ -60,24 +60,27 @@ def convert_processed_session(
 
     # Add Segmentation
     source_data.update(
-        dict(
-            SegmentationCalcium=dict(
-                folder_path=processed_data_dir_path, excitation_wavelength_nm=functional_wavelength_nm
-            )
-        )
+        dict(SVDCalcium=dict(folder_path=processed_data_dir_path, excitation_wavelength_nm=functional_wavelength_nm))
+    )
+    processed_data_conversion_options = dict(
+        stub_test=stub_test,
+        include_roi_centroids=False,
+        include_roi_acceptance=False,
     )
     conversion_options.update(
-        dict(SegmentationCalcium=dict(plane_segmentation_name="plane_segmentation_calcium", stub_test=stub_test))
+        dict(
+            SVDCalcium=dict(plane_segmentation_name="SVDTemporalComponentsCalcium", **processed_data_conversion_options)
+        )
     )
     source_data.update(
-        dict(
-            SegmentationIsosbestic=dict(
-                folder_path=processed_data_dir_path, excitation_wavelength_nm=isosbestic_wavelength_nm
-            )
-        )
+        dict(SVDIsosbestic=dict(folder_path=processed_data_dir_path, excitation_wavelength_nm=isosbestic_wavelength_nm))
     )
     conversion_options.update(
-        dict(SegmentationIsosbestic=dict(plane_segmentation_name="plane_segmentation_isosbestic", stub_test=stub_test))
+        dict(
+            SVDIsosbestic=dict(
+                plane_segmentation_name="SVDTemporalComponentsIsosbestic", **processed_data_conversion_options
+            )
+        )
     )
 
     # Add Behavior
@@ -92,22 +95,9 @@ def convert_processed_session(
     metadata["NWBFile"]["session_start_time"] = date
 
     # Update default metadata with the editable in the corresponding yaml file
-    editable_metadata_path = Path(__file__).parent.parent / "metadata" / "widefield_general_metadata.yaml"
+    editable_metadata_path = Path(__file__).parent.parent / "_metadata" / "widefield_general_metadata.yaml"
     editable_metadata = load_dict_from_file(editable_metadata_path)
     metadata = dict_deep_update(metadata, editable_metadata)
-
-    # Update ophys metadata
-    ophys_metadata_path = Path(__file__).parent.parent / "metadata" / "widefield_ophys_metadata.yaml"
-    ophys_metadata = load_dict_from_file(ophys_metadata_path)
-    metadata = dict_deep_update(metadata, ophys_metadata)
-
-    # Pop Raw ophys metadata ('OnePhotonSeries')
-    ophys_metadata_to_pop = [
-        "OnePhotonSeries",
-    ]
-    for key in ophys_metadata_to_pop:
-        if key in metadata["Ophys"]:
-            metadata["Ophys"].pop(key)
 
     metadata["Subject"]["subject_id"] = "a_subject_id"  # Modify here or in the yaml file
     metadata["NWBFile"]["session_id"] = session_id
