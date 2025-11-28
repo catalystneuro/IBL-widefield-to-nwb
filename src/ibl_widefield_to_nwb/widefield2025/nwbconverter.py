@@ -9,7 +9,7 @@ from pydantic import DirectoryPath
 from pynwb import NWBFile
 
 from ibl_widefield_to_nwb.widefield2025.datainterfaces import (
-    WidefieldSegmentationInterface,
+    WidefieldSVDInterface,
 )
 from ibl_widefield_to_nwb.widefield2025.utils import (
     _apply_channel_name_mapping,
@@ -22,8 +22,8 @@ class WidefieldProcessedNWBConverter(NWBConverter):
     """Primary conversion class for Widefield processed data."""
 
     data_interface_classes = dict(
-        SegmentationCalcium=WidefieldSegmentationInterface,
-        SegmentationIsosbestic=WidefieldSegmentationInterface,
+        SVDCalcium=WidefieldSVDInterface,
+        SVDIsosbestic=WidefieldSVDInterface,
     )
 
 

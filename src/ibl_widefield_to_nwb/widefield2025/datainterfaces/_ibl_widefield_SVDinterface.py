@@ -7,12 +7,12 @@ from neuroconv.datainterfaces.ophys.basesegmentationextractorinterface import (
 from neuroconv.utils import DeepDict, load_dict_from_file
 from pydantic import DirectoryPath
 
-from ibl_widefield_to_nwb.widefield2025.datainterfaces._ibl_widefield_segmentationextractor import (
-    WidefieldSegmentationExtractor,
+from ibl_widefield_to_nwb.widefield2025.datainterfaces._ibl_widefield_SVDextractor import (
+    WidefieldSVDExtractor,
 )
 
 
-class WidefieldSegmentationInterface(BaseSegmentationExtractorInterface):
+class WidefieldSVDInterface(BaseSegmentationExtractorInterface):
     """Data interface for IBL Widefield processed data."""
 
     display_name = "IBL Widefield Segmentation"
@@ -21,7 +21,7 @@ class WidefieldSegmentationInterface(BaseSegmentationExtractorInterface):
 
     @classmethod
     def get_extractor_class(cls):
-        return WidefieldSegmentationExtractor
+        return WidefieldSVDExtractor
 
     def __init__(
         self,
@@ -34,7 +34,7 @@ class WidefieldSegmentationInterface(BaseSegmentationExtractorInterface):
         Parameters
         ----------
         folder_path : DirectoryPath
-            Path to the folder containing the segmentation data.
+            Path to the folder containing the processed Widefield data.
         excitation_wavelength_nm : int
             The excitation wavelength (in nm) for the channel to load.
         verbose : bool, default : False
@@ -45,7 +45,7 @@ class WidefieldSegmentationInterface(BaseSegmentationExtractorInterface):
 
     def get_metadata(self) -> DeepDict:
         """
-        Get metadata for the Widefield segmentation.
+        Get metadata for the Widefield SVD data.
 
         Returns
         -------
@@ -91,16 +91,18 @@ class WidefieldSegmentationInterface(BaseSegmentationExtractorInterface):
         metadata_copy["Ophys"]["ImagingPlane"][0].update(imaging_plane_metadata)
         metadata_copy["Ophys"]["ImageSegmentation"]["plane_segmentations"][0].update(plane_segmentation_metadata)
 
+        image_segmentation_name = ophys_metadata["Ophys"]["ImageSegmentation"]["name"]
+        metadata_copy["Ophys"]["ImageSegmentation"].update(name=image_segmentation_name)
+
         plane_segmentation_name = plane_segmentation_metadata["name"]
         metadata_copy["Ophys"]["Fluorescence"].update(
-            {plane_segmentation_name: ophys_metadata["Ophys"]["Fluorescence"][plane_segmentation_name]}
+            {plane_segmentation_name: ophys_metadata["Ophys"]["Fluorescence"][plane_segmentation_name]},
+            name=ophys_metadata["Ophys"]["Fluorescence"]["name"],
         )
         metadata_copy["Ophys"]["SegmentationImages"].update(
-            {plane_segmentation_name: ophys_metadata["Ophys"]["SegmentationImages"][plane_segmentation_name]}
+            {plane_segmentation_name: ophys_metadata["Ophys"]["SegmentationImages"][plane_segmentation_name]},
+            name=ophys_metadata["Ophys"]["SegmentationImages"]["name"],
+            description=ophys_metadata["Ophys"]["SegmentationImages"]["description"],
         )
-        if "Calcium" in plane_segmentation_name:
-            metadata_copy["Ophys"]["DfOverF"].update(
-                {plane_segmentation_name: ophys_metadata["Ophys"]["DfOverF"][plane_segmentation_name]}
-            )
 
         return metadata_copy

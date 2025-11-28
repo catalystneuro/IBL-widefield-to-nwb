@@ -5,7 +5,7 @@ from typing import Literal
 from neuroconv.datainterfaces.ophys.baseimagingextractorinterface import (
     BaseImagingExtractorInterface,
 )
-from neuroconv.utils import DeepDict, load_dict_from_file
+from neuroconv.utils import DeepDict, dict_deep_update, load_dict_from_file
 from pydantic import DirectoryPath
 
 from ibl_widefield_to_nwb.widefield2025.datainterfaces._ibl_widefield_imagingextractor import (
@@ -100,7 +100,9 @@ class WidefieldImagingInterface(BaseImagingExtractorInterface):
             raise ValueError(
                 f"No 'ImagingPlane' metadata found for excitation wavelength: {excitation_wavelength} nm. "
             )
-
+        imaging_plane_metadata.update(
+            imaging_rate=float(self.imaging_extractor.get_sampling_frequency()),
+        )
         imaging_plane_name = imaging_plane_metadata["name"]
         one_photon_series_metadata = next(
             (
@@ -114,7 +116,11 @@ class WidefieldImagingInterface(BaseImagingExtractorInterface):
             raise ValueError(f"No 'OnePhotonSeries' metadata found for imaging plane: {imaging_plane_name}. ")
 
         metadata_copy["Ophys"]["Device"] = ophys_metadata["Ophys"]["Device"]
-        metadata_copy["Ophys"]["ImagingPlane"][0].update(imaging_plane_metadata)
-        metadata_copy["Ophys"]["OnePhotonSeries"][0].update(one_photon_series_metadata)
+        metadata_copy["Ophys"]["ImagingPlane"][0] = dict_deep_update(
+            metadata_copy["Ophys"]["ImagingPlane"][0], imaging_plane_metadata
+        )
+        metadata_copy["Ophys"]["OnePhotonSeries"][0] = dict_deep_update(
+            metadata_copy["Ophys"]["OnePhotonSeries"][0], one_photon_series_metadata
+        )
 
         return metadata_copy
