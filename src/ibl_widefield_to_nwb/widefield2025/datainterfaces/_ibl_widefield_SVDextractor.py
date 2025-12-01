@@ -8,13 +8,13 @@ from roiextractors import SegmentationExtractor
 from roiextractors.segmentationextractor import _ROIMasks, _RoiResponse
 
 
-class WidefieldSegmentationExtractor(SegmentationExtractor):
+class WidefieldSVDExtractor(SegmentationExtractor):
     """A segmentation extractor for IBL Widefield processed data."""
 
-    extractor_name = "WidefieldSegmentationExtractor"
+    extractor_name = "WidefieldSVDExtractor"
 
     def __init__(self, folder_path: DirectoryPath, excitation_wavelength_nm: int):
-        """Initialize a WidefieldSegmentationExtractor instance.
+        """Initialize a WidefieldSVDExtractor instance.
 
         Main class for extracting segmentation data from .npy format.
 
@@ -59,8 +59,7 @@ class WidefieldSegmentationExtractor(SegmentationExtractor):
         if len(imaging_light_source_properties) == 0:
             raise ValueError(f"No properties found for excitation wavelength '{self.excitation_wavelength_nm}' nm.")
         self.channel_id = imaging_light_source_properties["channel_id"]
-        suffix = "calcium" if excitation_wavelength_nm == 470 else "isosbestic"
-        self._channel_names = [f"green_channel_{suffix}"]
+        self._channel_names = ["OpticalChannel"]
 
         # This is available for both channels
         all_times = self._load_times()
@@ -226,7 +225,7 @@ class WidefieldSegmentationExtractor(SegmentationExtractor):
                 dff_traces = self._load_roi_response_dff()
                 # This is again (num_rois, num_timepoints), we transpose to (num_timepoints, num_rois)
                 dff_traces = dff_traces.T
-                self._roi_responses.append(_RoiResponse("dff", dff_traces, list(cell_ids)))
+                self._roi_responses.append(_RoiResponse("haemocorrected", dff_traces, list(cell_ids)))
 
         return self._roi_responses
 

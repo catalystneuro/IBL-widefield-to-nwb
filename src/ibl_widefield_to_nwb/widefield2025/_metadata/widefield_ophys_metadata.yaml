@@ -1,0 +1,68 @@
+Ophys:
+  Device:
+    - name: WidefieldMicroscope
+      description: The widefield microscope used to acquire simultaneous dual-wavelength imaging (blue/violet) at ~30 Hz.
+  ImagingPlane:
+    - name: ImagingPlaneCalcium
+      description: The imaging plane for calcium imaging from Blue light excitation.
+      excitation_lambda: 470.0  # in nm
+      location: unknown # TODO
+      indicator: GCaMP6f # Maybe this was only for Mesoscope and not for Widefield
+      optical_channel:
+        - name: OpticalChannel
+          emission_lambda: 510.0  # in nm (peak emission wavelength)  # TODO
+          description: GCaMP Ca2+ bound emission (calcium signal). (Thorlabs, cat. no. M470L4)
+      device: WidefieldMicroscope
+    - name: ImagingPlaneIsosbestic
+      description: The imaging plane for calcium imaging from Violet light excitation.
+      excitation_lambda: 405.0 # in nm
+      location: unknown # TODO
+      indicator: GCaMP6f
+      optical_channel:
+        - name: OpticalChannel
+          emission_lambda: 510.0  # in nm (peak emission wavelength)  # TODO
+          description:  GCaMP Ca2+ independent emission (isosbestic signal). (Thorlabs, cat. no. M405L4)
+      device: WidefieldMicroscope
+  OnePhotonSeries:
+    - name: OnePhotonSeriesCalcium
+      description: Widefield raw imaging under blue excitation at 470 nm (GCaMP signal).
+      imaging_plane: ImagingPlaneCalcium
+    - name: OnePhotonSeriesIsosbestic
+      description: Widefield raw imaging under violet excitation at 405 nm (isosbestic control).
+      imaging_plane: ImagingPlaneIsosbestic
+  ImageSegmentation:
+    name: SVDSpatialComponents
+    plane_segmentations:
+      - name: SVDTemporalComponentsCalcium
+        description: Spatial components for widefield calcium imaging.
+        imaging_plane: ImagingPlaneCalcium
+      - name: SVDTemporalComponentsIsosbestic
+        description: Spatial components for widefield calcium imaging.
+        imaging_plane: ImagingPlaneIsosbestic
+  Fluorescence:
+    name: SVDTemporalComponents
+    SVDTemporalComponentsCalcium:
+      raw:
+        name: DenoisedSVDTemporalComponentsCalcium
+        description: SVD temporal components (denoised/decomposed) of widefield calcium imaging from Blue light (470 nm) excitation.
+        unit: n.a.
+      haemocorrected:
+        name: HaemoCorrectedSVDTemporalComponentsCalcium
+        description: Haemodynamic corrected SVD temporal components of widefield calcium imaging from Blue light (470 nm) excitation.
+        unit: n.a.
+    SVDTemporalComponentsIsosbestic:
+      raw:
+        name: DenoisedSVDTemporalComponentsIsosbestic
+        description: SVD temporal components (denoised/decomposed) of widefield calcium imaging from Violet light (405 nm) excitation.
+        unit: n.a.
+  SegmentationImages:
+    name: SummaryImages
+    description: Summary images for widefield calcium imaging.
+    SVDTemporalComponentsCalcium:
+      mean:
+        name: MeanImage
+        description: The mean image under Blue (470 nm) excitation across the imaging session.
+    SVDTemporalComponentsIsosbestic:
+      mean:
+        name: MeanImageIsosbestic
+        description: The mean image under Violet (405 nm) excitation across the imaging session.
