@@ -11,6 +11,7 @@ from pynwb import read_nwb
 from ibl_widefield_to_nwb.widefield2025 import WidefieldRawNWBConverter
 from ibl_widefield_to_nwb.widefield2025.datainterfaces import WidefieldImagingInterface
 from ibl_widefield_to_nwb.widefield2025.utils import (
+    _build_nidq_metadata_from_wiring,
     _get_analog_channel_groups_from_wiring,
 )
 from neuroconv.datainterfaces import SpikeGLXNIDQInterface
@@ -198,7 +199,10 @@ def convert_raw_session(
 
     # Update nidq metadata with wiring info
     nidq_metadata_path = Path(__file__).parent.parent / "_metadata" / "widefield_nidq_metadata.yaml"
-    nidq_metadata = load_dict_from_file(nidq_metadata_path)
+    nidq_device_metadata = load_dict_from_file(nidq_metadata_path)
+
+    # Dynamically build metadata based on wiring.json (maps devices to actual channel IDs)
+    nidq_metadata = _build_nidq_metadata_from_wiring(wiring=wiring, device_metadata=nidq_device_metadata)
     metadata = dict_deep_update(metadata, nidq_metadata)
 
     metadata["Subject"]["subject_id"] = "a_subject_id"  # Modify here or in the yaml file
