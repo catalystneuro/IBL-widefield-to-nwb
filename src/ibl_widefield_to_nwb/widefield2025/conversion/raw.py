@@ -6,6 +6,8 @@ import time
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+from neuroconv.datainterfaces import SpikeGLXNIDQInterface
+from neuroconv.utils import dict_deep_update, load_dict_from_file
 from pynwb import read_nwb
 
 from ibl_widefield_to_nwb.widefield2025 import WidefieldRawNWBConverter
@@ -13,9 +15,8 @@ from ibl_widefield_to_nwb.widefield2025.datainterfaces import WidefieldImagingIn
 from ibl_widefield_to_nwb.widefield2025.utils import (
     _build_nidq_metadata_from_wiring,
     _get_analog_channel_groups_from_wiring,
+    _get_digital_channel_groups_from_wiring,
 )
-from neuroconv.datainterfaces import SpikeGLXNIDQInterface
-from neuroconv.utils import dict_deep_update, load_dict_from_file
 
 
 def convert_raw_session(
@@ -140,9 +141,11 @@ def convert_raw_session(
     wiring = json.load(open(wiring_file_path, "r"))
 
     analog_channel_groups = _get_analog_channel_groups_from_wiring(wiring=wiring)
+    digital_channel_groups = _get_digital_channel_groups_from_wiring(wiring=wiring)
     nidq_interface = SpikeGLXNIDQInterface(
         folder_path=nidq_data_dir_path,
         analog_channel_groups=analog_channel_groups,
+        digital_channel_groups=digital_channel_groups,
     )
 
     data_interfaces.update(NIDQ=nidq_interface)

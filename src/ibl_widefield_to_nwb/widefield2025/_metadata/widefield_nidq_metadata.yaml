@@ -1,103 +1,102 @@
-# This metadata is organized by device/sensor name (as specified in wiring.json)
-# rather than by channel ID, allowing dynamic mapping based on actual wiring configuration.
+# NIDQ channel metadata for IBL-Widefield sessions
+#
+# Adapted from https://github.com/h-mayorquin/IBL-to-nwb/blob/4fed77ec79e1b73c31a5c7e927b40e26256ed056/src/ibl_to_nwb/_metadata/nidq.yml
+#
+# This file contains NWB metadata for NIDQ channels, keyed by device name
+# as defined in wiring.json. Channel IDs are determined dynamically from
+# wiring.json at runtime - only device names need to match.
+#
+# Structure:
+#   Events: Digital channel metadata (device_name -> name, description, meanings)
+#   TimeSeries: Analog channel metadata (device_name -> name, description)
 
-# Analog signals metadata - keyed by device name from SYNC_WIRING_ANALOG
-AnalogSignals:
+TimeSeries:
   bpod:
-    name: "TimeSeriesBpod"
-    description: |
+    name: TimeSeriesBpod
+    description: >-
       Analog signal from Bpod behavioral control system.
-      This continuous voltage signal encodes behavioral state machine events and timestamps from the Bpod system,
-      which controls stimulus presentation and reward delivery during tasks.
+      This continuous voltage signal encodes behavioral state machine events and timestamps
+      from the Bpod system, which controls stimulus presentation and reward delivery during tasks.
       The analog encoding allows precise temporal alignment between Bpod events and neural recordings.
 
-# Digital signals metadata - keyed by device name from SYNC_WIRING_DIGITAL
-DigitalSignals:
+Events:
   left_camera:
-    name: "EventsLeftCamera"
-    description: |
+    name: EventsLeftCamera
+    description: >-
       Video frame acquisition times for the left-side camera (body camera).
-      Labels: 'exposure_end' = Camera exposure end or frame readout complete;
-      'frame_start' = Camera frame acquisition start (frame timestamp).
-      Each ON event marks when a video frame was captured by the camera,
+      Each event marks when a video frame was captured by the camera,
       enabling temporal alignment of behavior videos with neural and task data.
-    labels_map:
-      0: "exposure_end"
-      1: "frame_start"
+    meanings:
+      exposure_end: Camera exposure end or frame readout complete
+      frame_start: Camera frame acquisition start (frame timestamp)
+
   right_camera:
-    name: "EventsRightCamera"
-    description: |
+    name: EventsRightCamera
+    description: >-
       Video frame acquisition times for the right-side camera (body camera).
-      Labels: 'exposure_end' = Camera exposure end or frame readout complete;
-      'frame_start' = Camera frame acquisition start (frame timestamp).
-      Each ON event marks when a video frame was captured by the camera,
+      Each event marks when a video frame was captured by the camera,
       enabling temporal alignment of behavior videos with neural and task data.
-    labels_map:
-      0: "exposure_end"
-      1: "frame_start"
+    meanings:
+      exposure_end: Camera exposure end or frame readout complete
+      frame_start: Camera frame acquisition start (frame timestamp)
+
   body_camera:
-    name: "EventsBodyCamera"
-    description: |
+    name: EventsBodyCamera
+    description: >-
       Video frame acquisition times for the body camera.
-      Labels: 'exposure_end' = Camera exposure end or frame readout complete;
-      'frame_start' = Camera frame acquisition start (frame timestamp).
-      Each ON event marks when a video frame was captured by the camera,
+      Each event marks when a video frame was captured by the camera,
       enabling temporal alignment of behavior videos with neural and task data.
-    labels_map:
-      0: "exposure_end"
-      1: "frame_start"
+    meanings:
+      exposure_end: Camera exposure end or frame readout complete
+      frame_start: Camera frame acquisition start (frame timestamp)
+
   imec_sync:
-    name: "EventsImecSync"
-    description: |
+    name: EventsImecSync
+    description: >-
       Multi-probe synchronization signal (1 Hz square wave).
-      Labels: 'sync_low' = Sync signal low phase (0.5s duration at 1 Hz);
-      'sync_high' = Sync signal high phase (0.5s duration at 1 Hz).
-      This signal is simultaneously recorded on NIDQ and all Neuropixels probes (bit 6),
+      This signal is simultaneously recorded on NIDQ and all Neuropixels probes,
       enabling precise temporal alignment across multiple recording devices.
       The 1 Hz square wave provides regular alignment points for drift correction.
-    labels_map:
-      0: "sync_low"
-      1: "sync_high"
+    meanings:
+      sync_low: Sync signal low phase (0.5s duration at 1 Hz)
+      sync_high: Sync signal high phase (0.5s duration at 1 Hz)
+
   frame2ttl:
-    name: "EventsFrame2ttl"
-    description: |
+    name: EventsFrame2ttl
+    description: >-
       Monitor refresh events detected by photodiode for visual stimulus timing.
-      Labels: 'screen_dark' = Screen transitioned to dark (photodiode detected low luminance);
-      'screen_bright' = Screen transitioned to bright (photodiode detected high luminance).
       The Frame2TTL device uses a photodiode to detect changes in screen luminance,
       providing precise timing of when visual stimuli are displayed on the monitor.
       This is essential for accurate stimulus-response latency measurements.
-    labels_map:
-      0: "screen_dark"
-      1: "screen_bright"
+    meanings:
+      screen_dark: Screen transitioned to dark (photodiode detected low luminance)
+      screen_bright: Screen transitioned to bright (photodiode detected high luminance)
+
   rotary_encoder_0:
-    name: "EventsRotaryEncoder0"
-    description: |
+    name: EventsRotaryEncoder0
+    description: >-
       Rotary encoder pulses tracking wheel movement (quadrature phase A).
-      Labels: 'phase_low' = Encoder phase transition to LOW;
-      'phase_high' = Encoder phase transition to HIGH.
       Each pulse represents a discrete angular increment of the wheel rotation,
       used to measure behavioral responses and locomotion with high temporal precision.
-    labels_map:
-      0: "phase_low"
-      1: "phase_high"
+    meanings:
+      phase_low: Encoder phase transition to LOW
+      phase_high: Encoder phase transition to HIGH
+
   rotary_encoder_1:
-    name: "EventsRotaryEncoder1"
-    description: |
+    name: EventsRotaryEncoder1
+    description: >-
       Rotary encoder pulses tracking wheel movement (quadrature phase B).
-      Labels: 'phase_low' = Encoder phase transition to LOW;
-      'phase_high' = Encoder phase transition to HIGH.
       Combined with rotary_encoder_0, this provides directional information
       for wheel rotation through quadrature encoding.
-    labels_map:
-      0: "phase_low"
-      1: "phase_high"
+    meanings:
+      phase_low: Encoder phase transition to LOW
+      phase_high: Encoder phase transition to HIGH
+
   audio:
-    name: "EventsAudio"
-    description: |
+    name: EventsAudio
+    description: >-
       Auditory stimulus presentation events.
-      Labels: 'audio_off' = Audio stimulus off; 'audio_on' = Audio stimulus on.
       Marks timing of audio stimulus delivery for auditory tasks or cue presentation.
-    labels_map:
-      0: "audio_off"
-      1: "audio_on"
+    meanings:
+      audio_off: Audio stimulus off
+      audio_on: Audio stimulus on
