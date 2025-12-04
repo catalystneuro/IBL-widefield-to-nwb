@@ -75,6 +75,8 @@ def session_to_nwb(
                 append_on_disk_nwbfile=append_on_disk_nwbfile,
             )
 
+    print(f"\n✓ NWB file created/updated successfully at: {nwbfile_path}")
+
 
 if __name__ == "__main__":
 
@@ -86,7 +88,8 @@ if __name__ == "__main__":
     processed_data_dir_path = data_dir_path / "alf/widefield"
 
     output_dir_path = Path("/Volumes/T9/data/IBL/nwbfiles")
-    nwbfile_path = output_dir_path / "84565bbe-fd4c-4bdb-af55-968d46a4c424.nwb"
+    mode = "processed"  # Choose between "raw" and "processed"
+    nwbfile_path = output_dir_path / mode / "84565bbe-fd4c-4bdb-af55-968d46a4c424.nwb"
     append_on_disk_nwbfile = False  # Set to True to append to an existing NWB file
 
     functional_wavelength_nm = 470  # The wavelength for functional imaging (e.g. 470 nm)
@@ -94,7 +97,7 @@ if __name__ == "__main__":
 
     stub_test = False  # Set to True for quick testing with limited data
     session_to_nwb(
-        mode="raw",
+        mode=mode,
         nwbfile_path=nwbfile_path,
         raw_data_dir_path=raw_data_dir_path,
         cache_dir_path=cache_dir_path,
