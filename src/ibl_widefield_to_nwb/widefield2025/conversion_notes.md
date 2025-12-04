@@ -7,6 +7,9 @@
   - [How data are written to NWB (raw)](#raw-how-data-written)
   - [Array shapes and dtype](#array-shapes-and-dtype)
   - [Example metadata (raw)](#example-metadata-raw)
+- [NIDQ](#nidq)
+  - [Expected input folder structure (NIDQ)](#nidq-expected-input)
+  - [How data are written to NWB (NIDQ)](#nidq-how-data-written)
 - [Converting processed IBL widefield data to NWB format](#converting-processed-ibl-widefield-data-to-nwb-format)
   - [Expected input folder structure (processed)](#processed-expected-input)
   - [How data are written to NWB (processed)](#processed-how-data-written)
@@ -88,6 +91,52 @@ Ophys:
       description: Widefield raw imaging under violet excitation at 405 nm (isosbestic control).
       imaging_plane: ImagingPlaneIsosbestic
 ```
+
+<a name="nidq"></a>
+# NIDQ
+
+<a name="nidq-expected-input"></a>
+## Expected input folder structure
+The `SpikeGLXNIDQInterface` expects exactly one of each of the following files in that folder:
+
+```
+raw_ephys_data/
+├── _spikeglx_ephysData_g0_t0.nidq.cbin
+├── _spikeglx_ephysData_g0_t0.nidq.ch
+├── _spikeglx_ephysData_g0_t0.nidq.meta
+```
+
+## How data are written to NWB
+
+The continuous **analog** channels (e.g. Bpod analog outputs) are written as `TimeSeries` and added to `nwbfile.acquisition`.
+The discrete **digital** channels (TTL events) are added as `LabeledEvents` using the `ndx-events` extension, and are
+added to `nwbfile.acquisition`.
+
+The metadata for the digital and analog channels (name, description etc.) is taken from `metadata/widefield_nidq_metadata.yaml`.
+
+The wiring file `_spikeglx_ephysData_g0_t0.nidq.wiring.json` is used to determine which analog channels are added to the NWB file.
+An example wiring file is shown below:
+
+```json
+{
+    "SYSTEM": "3B",
+    "SYNC_WIRING_DIGITAL": {
+        "P0.0": "left_camera",
+        "P0.1": "right_camera",
+        "P0.2": "body_camera",
+        "P0.3": "imec_sync",
+        "P0.4": "frame2ttl",
+        "P0.5": "rotary_encoder_0",
+        "P0.6": "rotary_encoder_1",
+        "P0.7": "audio"
+    },
+    "SYNC_WIRING_ANALOG": {
+        "AI0": "bpod"
+    }
+}
+```
+
+In this example, only the analog channel `AI0` (named "bpod") will be added to the NWB file as a `TimeSeries`.
 
 <a name="processed-expected-input"></a>
 # Converting processed IBL widefield data to NWB format
