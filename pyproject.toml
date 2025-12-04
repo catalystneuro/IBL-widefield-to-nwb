@@ -24,8 +24,9 @@ Repository="https://github.com/catalystneuro/IBL-widefield-to-nwb"
 
 [project.optional-dependencies]
 widefield2025 = [
-  "neuroconv @ git+https://github.com/catalystneuro/neuroconv.git@nidq_digital_metadata",
+  "neuroconv @ git+https://github.com/catalystneuro/neuroconv.git@nidq_digital_metadata", # TODO: update when new version is released
   "roiextractors==0.7.2",
+  "ndx-spatial-transformation @ git+https://github.com/catalystneuro/ndx-spatial-transformation.git@update-extension" # TODO: update to main branch when merged
 ]
 
 [build-system]
