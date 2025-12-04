@@ -1,14 +1,15 @@
 """Primary NWBConverter class for this dataset."""
 
+from neuroconv import BaseDataInterface, ConverterPipe, NWBConverter
 from pydantic import DirectoryPath
 
 from ibl_widefield_to_nwb.widefield2025.datainterfaces import (
+    IBLWidefieldLandmarksInterface,
     WidefieldSVDInterface,
 )
 from ibl_widefield_to_nwb.widefield2025.utils import (
     _get_imaging_times_by_excitation_wavelength_nm,
 )
-from neuroconv import BaseDataInterface, ConverterPipe, NWBConverter
 
 
 class WidefieldProcessedNWBConverter(NWBConverter):
@@ -17,6 +18,7 @@ class WidefieldProcessedNWBConverter(NWBConverter):
     data_interface_classes = dict(
         SVDCalcium=WidefieldSVDInterface,
         SVDIsosbestic=WidefieldSVDInterface,
+        Landmarks=IBLWidefieldLandmarksInterface,
     )
 
 

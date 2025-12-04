@@ -83,6 +83,12 @@ def convert_processed_session(
         )
     )
 
+    # Add landmarks
+    landmarks_file_path = processed_data_dir_path / "widefieldLandmarks.dorsalCortex.json"
+    if landmarks_file_path.exists():
+        source_data.update(dict(Landmarks=dict(file_path=landmarks_file_path)))
+        conversion_options.update(dict(Landmarks=dict()))
+
     # Add Behavior
     # source_data.update(dict(Behavior=dict()))
     # conversion_options.update(dict(Behavior=dict()))
