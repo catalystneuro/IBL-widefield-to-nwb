@@ -153,8 +153,9 @@ class IBLWidefieldLandmarksInterface(BaseDataInterface):
         #  resolution: 0.0194
         space = AllenCCFv3Space()
         localization = Localization()
+        nwbfile.add_lab_meta_data([localization])
         localization.add_spaces([space])
-        table = AnatomicalCoordinatesTable(
+        anatomical_coordinates_table = AnatomicalCoordinatesTable(
             name="CCFLocalization",
             target=landmarks_table,
             description="CCF coordinates",
@@ -190,4 +191,12 @@ class IBLWidefieldLandmarksInterface(BaseDataInterface):
         landmarks_in_anatomical_registered_space = allen_landmarks["landmarks"]
         landmark_rows = landmarks_in_anatomical_registered_space.values.tolist()
         for localized_entity, row in enumerate(landmark_rows):
-            table.add_row(x=row[0], y=row[1], z=np.nan, brain_region=row[2], localized_entity=localized_entity)
+            anatomical_coordinates_table.add_row(
+                x=row[0],
+                y=row[1],
+                z=np.nan,
+                brain_region=row[2],
+                localized_entity=localized_entity,
+            )
+
+        localization.add_anatomical_coordinates_tables(anatomical_coordinates_table)
