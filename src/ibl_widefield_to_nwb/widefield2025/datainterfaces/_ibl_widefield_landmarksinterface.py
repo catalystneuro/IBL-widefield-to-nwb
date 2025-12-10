@@ -1,5 +1,3 @@
-import json
-
 from neuroconv import BaseDataInterface
 from neuroconv.tools import get_module
 from pydantic import FilePath
@@ -25,20 +23,6 @@ class IBLWidefieldLandmarksInterface(BaseDataInterface):
         """
 
         super().__init__(file_path=file_path)
-
-    def _load_json(self) -> dict:
-        """
-        Load landmarks data from JSON file.
-
-        Returns
-        -------
-        dict
-            Dictionary containing landmarks and transformation data.
-        """
-        with open(self.source_data["file_path"], "r") as f:
-            data = json.load(f)
-
-        return data
 
     def add_to_nwbfile(
         self,
@@ -66,13 +50,13 @@ class IBLWidefieldLandmarksInterface(BaseDataInterface):
             SimilarityTransformation,
             SpatialTransformationMetadata,
         )
-        from skimage.transform import SimilarityTransform
+        from wfield import load_allen_landmarks
 
-        data = self._load_json()
+        allen_landmarks = load_allen_landmarks(self.source_data["file_path"])
 
-        if "transform" not in data:
+        if "transform" not in allen_landmarks:
             raise ValueError("The JSON file must contain a 'transform' key with the transformation matrix.")
-        if "landmarks_match" not in data or "landmarks_im" not in data:
+        if "landmarks_match" not in allen_landmarks or "landmarks_im" not in allen_landmarks:
             raise ValueError("The JSON file must contain 'landmarks_match' and 'landmarks_im' keys with landmark data.")
 
         ophys_module = get_module(
@@ -91,10 +75,9 @@ class IBLWidefieldLandmarksInterface(BaseDataInterface):
             )
         source_image = ophys_module[summary_images_name][source_image_name]
 
-        transform_function = SimilarityTransform(data["transform"])
         # TODO: remove transpose when we save images in height x width format instead of width x height
         source_image_data = source_image.data[:].T  # Transpose to height x width
-        target_image_data = im_apply_transform(im=source_image_data, M=transform_function)
+        target_image_data = im_apply_transform(im=source_image_data, M=allen_landmarks["transform"])
 
         # Store transformed image in GrayscaleImage
         target_image = GrayscaleImage(
@@ -117,11 +100,11 @@ class IBLWidefieldLandmarksInterface(BaseDataInterface):
             target_image=target_image,
         )
 
-        coordinates_source_x = data["landmarks_match"]["x"]
-        coordinates_source_y = data["landmarks_match"]["y"]
-        coordinates_target_x = data["landmarks_im"]["x"]
-        coordinates_target_y = data["landmarks_im"]["y"]
-        names = data["landmarks_im"].get("name", [None] * len(coordinates_source_x))
+        coordinates_source_x = allen_landmarks["landmarks_match"]["x"]
+        coordinates_source_y = allen_landmarks["landmarks_match"]["y"]
+        coordinates_target_x = allen_landmarks["landmarks_im"]["x"]
+        coordinates_target_y = allen_landmarks["landmarks_im"]["y"]
+        names = allen_landmarks["landmarks_im"]["name"]
         for source_x, source_y, target_x, target_y, label in zip(
             coordinates_source_x,
             coordinates_source_y,
@@ -137,19 +120,20 @@ class IBLWidefieldLandmarksInterface(BaseDataInterface):
                 row_kwargs.update(landmark_labels=label)
             landmarks_table.add_row(**row_kwargs)
 
-        if "color" in data["landmarks_match"]:
+        if "color" in allen_landmarks["landmarks_match"]:
             landmarks_table.add_column(
                 name="color",
-                data=data["landmarks_match"]["color"],
+                data=allen_landmarks["landmarks_match"]["color"].tolist(),
                 description="TODO: add description for color column",
             )
 
         # Add metadata to NWB file
         spatial_metadata = SpatialTransformationMetadata(name="SpatialTransformationMetadata")
 
+        transform_function = allen_landmarks["transform"]
         similarity_transformation = SimilarityTransformation(
             name="SimilarityTransformation",
-            rotation_angle=transform_function.rotation,
+            rotation_matrix=transform_function.params[:2, :2],
             translation_vector=transform_function.translation,
             scale=transform_function.scale,
         )
