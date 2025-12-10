@@ -7,6 +7,9 @@ from pydantic import DirectoryPath
 from roiextractors import SegmentationExtractor
 from roiextractors.segmentationextractor import _ROIMasks, _RoiResponse
 
+# TODO: remove once neuroconv writes height x width by default
+TRANSPOSE_OUTPUT = True
+
 
 class WidefieldSVDExtractor(SegmentationExtractor):
     """A segmentation extractor for IBL Widefield processed data."""
@@ -72,7 +75,7 @@ class WidefieldSVDExtractor(SegmentationExtractor):
         roi_id_map = {roi_id: index for index, roi_id in enumerate(cell_ids)}
         self._frame_shape = self.get_frame_shape()
         self._roi_masks = _ROIMasks(
-            data=all_image_masks,
+            data=all_image_masks if not TRANSPOSE_OUTPUT else all_image_masks.transpose(1, 0, 2),
             mask_tpe="nwb-image_mask",
             field_of_view_shape=self._frame_shape,
             roi_id_map=roi_id_map,
@@ -106,7 +109,7 @@ class WidefieldSVDExtractor(SegmentationExtractor):
         mean_images = np.load(self.folder_path / self._mean_image_file_name)
         first_frame_index = self._frames_indices[0]
         mean_image = mean_images[first_frame_index, ...]
-        return mean_image
+        return mean_image if not TRANSPOSE_OUTPUT else mean_image.transpose()
 
     # TODO: replace with loading from ONE API
     def _load_images(self):

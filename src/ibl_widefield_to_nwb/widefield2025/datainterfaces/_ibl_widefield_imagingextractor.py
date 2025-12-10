@@ -8,6 +8,9 @@ import pandas as pd
 from pydantic import DirectoryPath, FilePath
 from roiextractors import ImagingExtractor
 
+# TODO: remove once neuroconv writes height x width by default
+TRANSPOSE_OUTPUT = True
+
 
 class WidefieldImagingExtractor(ImagingExtractor):
     """
@@ -154,7 +157,9 @@ class WidefieldImagingExtractor(ImagingExtractor):
         image_shape: tuple
             Shape of the video frame (num_rows, num_columns).
         """
-        return self._video_metadata["image_shape"]
+        return (
+            self._video_metadata["image_shape"] if not TRANSPOSE_OUTPUT else self._video_metadata["image_shape"][::-1]
+        )
 
     def get_num_samples(self) -> int:
         """
@@ -196,7 +201,7 @@ class WidefieldImagingExtractor(ImagingExtractor):
         frames_memmap = self._load_frame_cache()
         # index memmap with the required frame indices (fast, no re-decode)
         series = np.asarray(frames_memmap[frame_indices])
-        return series
+        return series if not TRANSPOSE_OUTPUT else series.transpose(0, 2, 1)
 
     def get_native_timestamps(
         self, start_sample: Optional[int] = None, end_sample: Optional[int] = None

@@ -9,6 +9,7 @@ from neuroconv.utils import DeepDict, dict_deep_update, load_dict_from_file
 from pydantic import DirectoryPath
 
 from ibl_widefield_to_nwb.widefield2025.datainterfaces._ibl_widefield_imagingextractor import (
+    TRANSPOSE_OUTPUT,
     WidefieldImagingExtractor,
 )
 
@@ -114,6 +115,11 @@ class WidefieldImagingInterface(BaseImagingExtractorInterface):
         )
         if one_photon_series_metadata is None:
             raise ValueError(f"No 'OnePhotonSeries' metadata found for imaging plane: {imaging_plane_name}. ")
+
+        # TODO: remove once neuroconv supports (height, width) format
+        if TRANSPOSE_OUTPUT:
+            # Transpose it back to height x width (now it matches the series shape)
+            one_photon_series_metadata["dimension"] = self.imaging_extractor.get_sample_shape()[::-1]
 
         metadata_copy["Ophys"]["Device"] = ophys_metadata["Ophys"]["Device"]
         metadata_copy["Ophys"]["ImagingPlane"][0] = dict_deep_update(
