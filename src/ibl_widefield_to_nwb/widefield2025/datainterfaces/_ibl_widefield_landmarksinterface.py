@@ -1,3 +1,5 @@
+import numpy as np
+from ndx_anatomical_localization import AnatomicalCoordinatesTable, Localization
 from neuroconv import BaseDataInterface
 from neuroconv.tools import get_module
 from pydantic import FilePath
@@ -45,6 +47,9 @@ class IBLWidefieldLandmarksInterface(BaseDataInterface):
         source_image_name : str, default: "MeanImage"
             Name of the source image within the summary images container.
         """
+        from ndx_anatomical_localization import (
+            AllenCCFv3Space,
+        )
         from ndx_spatial_transformation import (
             Landmarks,
             SimilarityTransformation,
@@ -141,3 +146,48 @@ class IBLWidefieldLandmarksInterface(BaseDataInterface):
         spatial_metadata.add_landmarks(landmarks=landmarks_table)
 
         nwbfile.add_lab_meta_data(spatial_metadata)
+
+        # TODO: move this to separate function
+        # Do we need to store the bregma offset and resolution somewhere?
+        #  bregma offset: [320, 270]
+        #  resolution: 0.0194
+        space = AllenCCFv3Space()
+        localization = Localization()
+        localization.add_spaces([space])
+        table = AnatomicalCoordinatesTable(
+            name="CCFLocalization",
+            target=landmarks_table,
+            description="CCF coordinates",
+            method="manual annotation",
+            space=space,
+        )
+        """ TODO: remove debug notes
+
+        landmarks
+              x     y       name    color
+        0 -1.95 -3.45    OB_left  #fc9d03
+        1  0.00 -3.45  OB_center  #0367fc
+        2  1.95 -3.45   OB_right  #fc9d03
+        3  0.00  3.20   RSP_base  #fc4103
+        """
+
+        """ landmarks_match -> source coordinates
+                    x           y       name    color
+        0  137.337774  381.428925    OB_left  #fc9d03
+        1  150.764796  302.164284  OB_center  #0367fc
+        2  140.903437  226.593808   OB_right  #fc9d03
+        3  493.558386  301.863883   RSP_base  #fc4103
+        """
+
+        """ landmarks_im -> target coordinates
+                    x           y       name    color
+        0  219.484536   92.164948    OB_left  #fc9d03
+        1  320.000000   92.164948  OB_center  #0367fc
+        2  420.515464   92.164948   OB_right  #fc9d03
+        3  320.000000  434.948454   RSP_base  #fc4103
+        """
+
+        landmarks_in_anatomical_registered_space = allen_landmarks["landmarks"]
+        landmark_rows = landmarks_in_anatomical_registered_space.values.tolist()
+        for localized_entity, row in enumerate(landmark_rows):
+            table.add_row(x=row[0], y=row[1], z=np.nan, brain_region=row[2], localized_entity=localized_entity)
