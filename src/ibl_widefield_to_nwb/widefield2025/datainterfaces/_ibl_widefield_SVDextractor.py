@@ -7,14 +7,17 @@ from pydantic import DirectoryPath
 from roiextractors import SegmentationExtractor
 from roiextractors.segmentationextractor import _ROIMasks, _RoiResponse
 
+# TODO: remove once neuroconv writes height x width by default
+TRANSPOSE_OUTPUT = True
 
-class WidefieldSegmentationExtractor(SegmentationExtractor):
+
+class WidefieldSVDExtractor(SegmentationExtractor):
     """A segmentation extractor for IBL Widefield processed data."""
 
-    extractor_name = "WidefieldSegmentationExtractor"
+    extractor_name = "WidefieldSVDExtractor"
 
     def __init__(self, folder_path: DirectoryPath, excitation_wavelength_nm: int):
-        """Initialize a WidefieldSegmentationExtractor instance.
+        """Initialize a WidefieldSVDExtractor instance.
 
         Main class for extracting segmentation data from .npy format.
 
@@ -59,8 +62,7 @@ class WidefieldSegmentationExtractor(SegmentationExtractor):
         if len(imaging_light_source_properties) == 0:
             raise ValueError(f"No properties found for excitation wavelength '{self.excitation_wavelength_nm}' nm.")
         self.channel_id = imaging_light_source_properties["channel_id"]
-        suffix = "calcium" if excitation_wavelength_nm == 470 else "isosbestic"
-        self._channel_names = [f"green_channel_{suffix}"]
+        self._channel_names = ["OpticalChannel"]
 
         # This is available for both channels
         all_times = self._load_times()
@@ -73,7 +75,7 @@ class WidefieldSegmentationExtractor(SegmentationExtractor):
         roi_id_map = {roi_id: index for index, roi_id in enumerate(cell_ids)}
         self._frame_shape = self.get_frame_shape()
         self._roi_masks = _ROIMasks(
-            data=all_image_masks,
+            data=all_image_masks if not TRANSPOSE_OUTPUT else all_image_masks.transpose(1, 0, 2),
             mask_tpe="nwb-image_mask",
             field_of_view_shape=self._frame_shape,
             roi_id_map=roi_id_map,
@@ -107,7 +109,7 @@ class WidefieldSegmentationExtractor(SegmentationExtractor):
         mean_images = np.load(self.folder_path / self._mean_image_file_name)
         first_frame_index = self._frames_indices[0]
         mean_image = mean_images[first_frame_index, ...]
-        return mean_image
+        return mean_image if not TRANSPOSE_OUTPUT else mean_image.transpose()
 
     # TODO: replace with loading from ONE API
     def _load_images(self):
@@ -226,7 +228,7 @@ class WidefieldSegmentationExtractor(SegmentationExtractor):
                 dff_traces = self._load_roi_response_dff()
                 # This is again (num_rois, num_timepoints), we transpose to (num_timepoints, num_rois)
                 dff_traces = dff_traces.T
-                self._roi_responses.append(_RoiResponse("dff", dff_traces, list(cell_ids)))
+                self._roi_responses.append(_RoiResponse("haemocorrected", dff_traces, list(cell_ids)))
 
         return self._roi_responses
 

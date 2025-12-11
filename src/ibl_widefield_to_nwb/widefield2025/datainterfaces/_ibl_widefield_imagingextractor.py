@@ -8,6 +8,9 @@ import pandas as pd
 from pydantic import DirectoryPath, FilePath
 from roiextractors import ImagingExtractor
 
+# TODO: remove once neuroconv writes height x width by default
+TRANSPOSE_OUTPUT = True
+
 
 class WidefieldImagingExtractor(ImagingExtractor):
     """
@@ -74,15 +77,16 @@ class WidefieldImagingExtractor(ImagingExtractor):
         channel_id = imaging_light_source_properties["LED"]
         if len(imaging_light_source_properties) == 0:
             raise ValueError(f"No properties found for channel_id '{channel_id}'")
+        self._num_channels = len(np.unique(self._camera_log_metadata["channel_id"]))
+        if self._num_channels != 2:
+            raise ValueError(f"Expected 2 channels in camera log, found {self._num_channels}.")
         # filter for channel_id and compute zero-indexed frame indices
         self._camera_log_metadata = self._camera_log_metadata[
             self._camera_log_metadata["channel_id"] == int(channel_id)
         ].reset_index(drop=True)
         self._frame_indices = self._camera_log_metadata["frame_id"].astype(int).to_numpy() - 1  # zero indexed
-        self._num_channels = len(np.unique(self._camera_log_metadata["channel_id"]))
 
-        suffix = "calcium" if excitation_wavelength_nm == 470 else "isosbestic"
-        self._channel_names = [f"green_channel_{suffix}"]
+        self._channel_names = ["OpticalChannel"]
         super().__init__()
 
     def _load_frame_cache(self) -> np.memmap:
@@ -153,7 +157,9 @@ class WidefieldImagingExtractor(ImagingExtractor):
         image_shape: tuple
             Shape of the video frame (num_rows, num_columns).
         """
-        return self._video_metadata["image_shape"]
+        return (
+            self._video_metadata["image_shape"] if not TRANSPOSE_OUTPUT else self._video_metadata["image_shape"][::-1]
+        )
 
     def get_num_samples(self) -> int:
         """
@@ -195,7 +201,7 @@ class WidefieldImagingExtractor(ImagingExtractor):
         frames_memmap = self._load_frame_cache()
         # index memmap with the required frame indices (fast, no re-decode)
         series = np.asarray(frames_memmap[frame_indices])
-        return series
+        return series if not TRANSPOSE_OUTPUT else series.transpose(0, 2, 1)
 
     def get_native_timestamps(
         self, start_sample: Optional[int] = None, end_sample: Optional[int] = None
