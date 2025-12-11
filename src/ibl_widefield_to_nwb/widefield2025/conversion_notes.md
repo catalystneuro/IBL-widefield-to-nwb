@@ -47,7 +47,7 @@ The conversion uses `WidefieldRawNWBConverter`. For each channel converted, the 
 2) Ophys/OnePhotonSeries
 - Name: `OnePhotonSeriesCalcium` for 470 nm or `OnePhotonSeriesIsosbestic` for 405 nm.
 - `imaging_plane` is linked to the corresponding ImagingPlane above.
-- Data shape written is (time, width, height); frames are converted to grayscale from the source RGB using OpenCV during read.
+- Data shape written is (time, height, width); frames are converted to grayscale from the source RGB using OpenCV during read.
 - Native timestamps originate from the .camlog entries for the selected channel.
 - Aligned timestamps are taken from the processed data (`imaging.times.npy` filtered by the excitation wavelength).
 
@@ -176,7 +176,7 @@ The conversion uses `WidefieldProcessedNWBConverter`. For each channel converted
 
 2) Ophys/SVDSpatialComponents
 - Name: `SVDTemporalComponentsCalcium` for 470 nm or `SVDTemporalComponentsIsosbestic` for 405 nm.
-- The spatial components from `widefieldU.images.npy` are written as width x height arrays for each spatial component and added to `SVDTemporalComponentsCalcium.image_mask` and `SVDTemporalComponentsIsosbestic.image_mask`.
+- The spatial components from `widefieldU.images.npy` are written as height x width arrays for each spatial component and added to `SVDTemporalComponentsCalcium.image_mask` and `SVDTemporalComponentsIsosbestic.image_mask`.
 - The `imaging_plane` reference is linked to the corresponding ImagingPlane created above.
 
 3) Ophys/SVDTemporalComponents
@@ -189,7 +189,7 @@ Haemodynamically Corrected SVD Temporal Components:
 
 4) Ophys/SummaryImages
 - Name: `MeanImage` for 470 nm or `MeanImageIsosbestic` for 405 nm.
-- The summary images from `widefieldChannels.frameAverage` are written as width x height arrays.
+- The summary images from `widefieldChannels.frameAverage` are written as height x width arrays.
 
 <a name="example-metadata-processed"></a>
 Example metadata:
