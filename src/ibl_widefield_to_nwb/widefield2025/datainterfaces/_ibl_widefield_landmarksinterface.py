@@ -80,8 +80,7 @@ class IBLWidefieldLandmarksInterface(BaseDataInterface):
             )
         source_image = ophys_module[summary_images_name][source_image_name]
 
-        # TODO: remove transpose when we save images in height x width format instead of width x height
-        source_image_data = source_image.data[:].T  # Transpose to height x width
+        source_image_data = source_image.data[:]
         target_image_data = im_apply_transform(im=source_image_data, M=allen_landmarks["transform"])
 
         # Store transformed image in GrayscaleImage
