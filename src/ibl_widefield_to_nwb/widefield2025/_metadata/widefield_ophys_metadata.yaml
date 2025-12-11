@@ -25,10 +25,10 @@ Ophys:
       device: WidefieldMicroscope
   OnePhotonSeries:
     - name: OnePhotonSeriesCalcium
-      description: Widefield raw imaging under blue excitation at 470 nm (GCaMP signal).
+      description: Widefield raw imaging under blue excitation at 470 nm (GCaMP signal). The dimensions are (time, height, width).
       imaging_plane: ImagingPlaneCalcium
     - name: OnePhotonSeriesIsosbestic
-      description: Widefield raw imaging under violet excitation at 405 nm (isosbestic control).
+      description: Widefield raw imaging under violet excitation at 405 nm (isosbestic control). The dimensions are (time, height, width).
       imaging_plane: ImagingPlaneIsosbestic
   ImageSegmentation:
     name: SVDSpatialComponents
@@ -61,8 +61,8 @@ Ophys:
     SVDTemporalComponentsCalcium:
       mean:
         name: MeanImage
-        description: The mean image under Blue (470 nm) excitation across the imaging session.
+        description: The mean image under Blue (470 nm) excitation across the imaging session. The dimensions are (height, width).
     SVDTemporalComponentsIsosbestic:
       mean:
         name: MeanImageIsosbestic
-        description: The mean image under Violet (405 nm) excitation across the imaging session.
+        description: The mean image under Violet (405 nm) excitation across the imaging session. The dimensions are (height, width).
