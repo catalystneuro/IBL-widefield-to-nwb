@@ -51,8 +51,8 @@ class IBLWidefieldLandmarksInterface(BaseDataInterface):
             AllenCCFv3Space,
         )
         from ndx_spatial_transformation import (
+            AffineTransformation,
             Landmarks,
-            SimilarityTransformation,
             SpatialTransformationMetadata,
         )
         from wfield import load_allen_landmarks
@@ -85,21 +85,23 @@ class IBLWidefieldLandmarksInterface(BaseDataInterface):
 
         # Store transformed image in GrayscaleImage
         target_image = GrayscaleImage(
-            name="MeanImageTransformed",  # TODO: what should we name this?
+            name="CCFAlignedMeanImage",
             description="Transformed frame aligned to Allen CCF coordinates",
             data=target_image_data,
         )
         # Add images to NWB file
-        images_container_name = "TransformedImages"
+        images_container_name = "CCFAlignedImages"
         if images_container_name not in ophys_module.data_interfaces:
-            ophys_module.add(Images(name="TransformedImages", description="Contains transformed images."))
+            ophys_module.add(
+                Images(name=images_container_name, description="Contains images aligned to Allen CCF coordinates.")
+            )
 
         ophys_module.data_interfaces[images_container_name].add_image(target_image)
 
         # Create landmarks table
         landmarks_table = Landmarks(
             name="Landmarks",
-            description="Anatomical landmarks for Allen CCF alignment",
+            description="Anatomical landmarks for Allen CCF alignment.",
             source_image=source_image,
             target_image=target_image,
         )
@@ -128,20 +130,18 @@ class IBLWidefieldLandmarksInterface(BaseDataInterface):
             landmarks_table.add_column(
                 name="color",
                 data=allen_landmarks["landmarks_match"]["color"].tolist(),
-                description="TODO: add description for color column",
+                description="Color hex code for each landmark.",
             )
 
         # Add metadata to NWB file
         spatial_metadata = SpatialTransformationMetadata(name="SpatialTransformationMetadata")
 
         transform_function = allen_landmarks["transform"]
-        similarity_transformation = SimilarityTransformation(
-            name="SimilarityTransformation",
-            rotation_matrix=transform_function.params[:2, :2],
-            translation_vector=transform_function.translation,
-            scale=transform_function.scale,
+        spatial_transformation = AffineTransformation(
+            name="AffineTransformation",
+            affine_matrix=transform_function.params,
         )
-        spatial_metadata.add_spatial_transformations(spatial_transformations=similarity_transformation)
+        spatial_metadata.add_spatial_transformations(spatial_transformations=spatial_transformation)
         spatial_metadata.add_landmarks(landmarks=landmarks_table)
 
         nwbfile.add_lab_meta_data(spatial_metadata)
