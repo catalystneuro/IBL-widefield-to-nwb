@@ -161,40 +161,27 @@ class IBLWidefieldLandmarksInterface(BaseDataInterface):
             method="manual annotation",
             space=space,
         )
-        """ TODO: remove debug notes
-
-        landmarks
-              x     y       name    color
-        0 -1.95 -3.45    OB_left  #fc9d03
-        1  0.00 -3.45  OB_center  #0367fc
-        2  1.95 -3.45   OB_right  #fc9d03
-        3  0.00  3.20   RSP_base  #fc4103
-        """
-
-        """ landmarks_match -> source coordinates
-                    x           y       name    color
-        0  137.337774  381.428925    OB_left  #fc9d03
-        1  150.764796  302.164284  OB_center  #0367fc
-        2  140.903437  226.593808   OB_right  #fc9d03
-        3  493.558386  301.863883   RSP_base  #fc4103
-        """
-
-        """ landmarks_im -> target coordinates
-                    x           y       name    color
-        0  219.484536   92.164948    OB_left  #fc9d03
-        1  320.000000   92.164948  OB_center  #0367fc
-        2  420.515464   92.164948   OB_right  #fc9d03
-        3  320.000000  434.948454   RSP_base  #fc4103
-        """
+        anatomical_coordinates_table.add_column(
+            name="resolution",
+            description="Resolution used to convert from image pixels to anatomical coordinates (in mm/px).",
+        )
+        anatomical_coordinates_table.add_column(
+            name="bregma_offset",
+            description="Bregma offset in pixel coordinates.",
+        )
 
         landmarks_in_anatomical_registered_space = allen_landmarks["landmarks"]
         landmark_rows = landmarks_in_anatomical_registered_space.values.tolist()
         for localized_entity, row in enumerate(landmark_rows):
+            x_um = row[0] * 1000  # convert mm to um
+            y_um = row[1] * 1000
             anatomical_coordinates_table.add_row(
-                x=row[0],
-                y=row[1],
-                z=np.nan,
-                brain_region=row[2],
+                x=x_um,
+                y=y_um,
+                z=np.nan,  # TODO: why no z coordinate?
+                resolution=allen_landmarks["resolution"],  # mm/px
+                bregma_offset=allen_landmarks["bregma_offset"],  # px
+                brain_region=row[2],  # TODO: how to store the brain region?
                 localized_entity=localized_entity,
             )
 
