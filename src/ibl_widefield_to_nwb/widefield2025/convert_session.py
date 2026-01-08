@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+from one.api import ONE
+
 from ibl_widefield_to_nwb.widefield2025.conversion import (
     convert_processed_session,
     convert_raw_session,
@@ -9,7 +11,9 @@ from ibl_widefield_to_nwb.widefield2025.conversion import (
 
 
 def session_to_nwb(
-    nwbfile_path: str | Path,
+    one: ONE,
+    eid: str,
+    nwb_folder_path: str | Path,
     raw_data_dir_path: str | Path,
     cache_dir_path: str | Path,
     nidq_data_dir_path: str | Path,
@@ -26,8 +30,12 @@ def session_to_nwb(
 
     Parameters
     ----------
-    nwbfile_path: str or Path
-        Path to the output NWB file.
+    one: ONE
+        An instance of the ONE API to access data.
+    eid: str
+        The session ID.
+    nwb_folder_path: str or Path
+        Path to the directory to save the output NWB file.
     raw_data_dir_path: str or Path
         Path to the directory containing the raw widefield data for the session.
     cache_dir_path: str or Path
@@ -51,6 +59,19 @@ def session_to_nwb(
 
     """
 
+    nwb_folder_path = Path(nwb_folder_path)
+    nwb_folder_path.mkdir(parents=True, exist_ok=True)
+
+    try:
+        ((session_metadata),) = one.alyx.rest(url="sessions", action="list", id=eid)
+    except Exception as e:
+        raise RuntimeError(f"Failed to access ONE for eid {eid}: {e}")
+
+    subject_id = session_metadata["subject"]
+    nwbfile_path = Path(nwb_folder_path) / f"sub-{subject_id}_ses-{eid}_desc-{mode}_ophys+behavior.nwb"
+
+    one_api_kwargs = dict(one=one, eid=eid)
+
     match mode:
         case "raw":
             nwbfile_path = convert_raw_session(
@@ -71,6 +92,7 @@ def session_to_nwb(
                 processed_data_dir_path=processed_data_dir_path,
                 functional_wavelength_nm=functional_wavelength_nm,
                 isosbestic_wavelength_nm=isosbestic_wavelength_nm,
+                one_api_kwargs=one_api_kwargs,
                 stub_test=stub_test,
                 append_on_disk_nwbfile=append_on_disk_nwbfile,
             )
@@ -86,16 +108,24 @@ if __name__ == "__main__":
     processed_data_dir_path = data_dir_path / "alf/widefield"
 
     output_dir_path = Path("/Volumes/T9/data/IBL/nwbfiles")
-    nwbfile_path = output_dir_path / "84565bbe-fd4c-4bdb-af55-968d46a4c424.nwb"
     append_on_disk_nwbfile = False  # Set to True to append to an existing NWB file
 
     functional_wavelength_nm = 470  # The wavelength for functional imaging (e.g. 470 nm)
     isosbestic_wavelength_nm = 405  # The wavelength for isosbestic imaging (e.g. 405 nm)
 
     stub_test = False  # Set to True for quick testing with limited data
+
+    # ONE api instance
+    from one.api import ONE
+
+    one = ONE()
+    eid = "d34a502f-bd06-471f-8334-df41f785e1d9"
+
     session_to_nwb(
-        mode="raw",
-        nwbfile_path=nwbfile_path,
+        one=one,
+        eid=eid,
+        nwb_folder_path=output_dir_path,
+        mode="processed",
         raw_data_dir_path=raw_data_dir_path,
         cache_dir_path=cache_dir_path,
         processed_data_dir_path=processed_data_dir_path,
