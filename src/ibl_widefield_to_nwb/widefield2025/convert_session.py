@@ -74,6 +74,10 @@ def session_to_nwb(
 
     match mode:
         case "raw":
+            one_api_kwargs.update(
+                subject_id=subject_id,
+                nwbfiles_folder_path=nwb_folder_path,
+            )
             nwbfile_path = convert_raw_session(
                 nwbfile_path=nwbfile_path,
                 raw_data_dir_path=raw_data_dir_path,
@@ -82,6 +86,7 @@ def session_to_nwb(
                 processed_data_dir_path=processed_data_dir_path,
                 functional_wavelength_nm=functional_wavelength_nm,
                 isosbestic_wavelength_nm=isosbestic_wavelength_nm,
+                one_api_kwargs=one_api_kwargs,
                 force_cache=force_cache,
                 stub_test=stub_test,
                 append_on_disk_nwbfile=append_on_disk_nwbfile,
