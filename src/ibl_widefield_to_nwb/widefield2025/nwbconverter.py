@@ -1,23 +1,44 @@
 """Primary NWBConverter class for this dataset."""
 
+from datetime import datetime
+
+from neuroconv import BaseDataInterface, ConverterPipe
+from one.api import ONE
 from pydantic import DirectoryPath
 
-from ibl_widefield_to_nwb.widefield2025.datainterfaces import (
-    WidefieldSVDInterface,
-)
 from ibl_widefield_to_nwb.widefield2025.utils import (
     _get_imaging_times_by_excitation_wavelength_nm,
 )
-from neuroconv import BaseDataInterface, ConverterPipe, NWBConverter
 
 
-class WidefieldProcessedNWBConverter(NWBConverter):
+class WidefieldProcessedNWBConverter(ConverterPipe):
     """Primary conversion class for Widefield processed data."""
 
-    data_interface_classes = dict(
-        SVDCalcium=WidefieldSVDInterface,
-        SVDIsosbestic=WidefieldSVDInterface,
-    )
+    def __init__(
+        self,
+        one: ONE,
+        eid: str,
+        data_interfaces: list[BaseDataInterface] | dict[str, BaseDataInterface],
+        verbose=False,
+    ):
+        self.one = one
+        self.eid = eid
+        super().__init__(data_interfaces=data_interfaces, verbose=verbose)
+
+    def get_metadata(self):
+        metadata = super().get_metadata()
+
+        try:
+            ((session_metadata),) = self.one.alyx.rest(url="sessions", action="list", id=self.eid)
+        except Exception as e:
+            raise RuntimeError(f"Failed to access ONE for eid {self.eid}: {e}")
+
+        session_start_time = datetime.fromisoformat(session_metadata["start_time"])
+        metadata["NWBFile"]["session_start_time"] = session_start_time
+        metadata["NWBFile"]["session_id"] = self.eid
+        metadata["Subject"]["subject_id"] = session_metadata["subject"]
+
+        return metadata
 
 
 class WidefieldRawNWBConverter(ConverterPipe):
