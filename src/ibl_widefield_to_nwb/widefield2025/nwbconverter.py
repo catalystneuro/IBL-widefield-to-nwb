@@ -49,16 +49,35 @@ class WidefieldRawNWBConverter(ConverterPipe):
 
     def __init__(
         self,
+        one: ONE,
+        eid: str,
         data_interfaces: list[BaseDataInterface] | dict[str, BaseDataInterface],
         processed_data_folder_path: DirectoryPath | None = None,
         verbose=False,
     ):
+        self.one = one
+        self.eid = eid
         if processed_data_folder_path is not None:
             self._aligned_times_file_path = processed_data_folder_path / "imaging.times.npy"
             self._light_source_file_path = processed_data_folder_path / "imaging.imagingLightSource.npy"
             self._light_source_properties_file_path = processed_data_folder_path / "imagingLightSource.properties.htsv"
 
         super().__init__(data_interfaces=data_interfaces, verbose=verbose)
+
+    def get_metadata(self):
+        metadata = super().get_metadata()
+
+        try:
+            ((session_metadata),) = self.one.alyx.rest(url="sessions", action="list", id=self.eid)
+        except Exception as e:
+            raise RuntimeError(f"Failed to access ONE for eid {self.eid}: {e}")
+
+        session_start_time = datetime.fromisoformat(session_metadata["start_time"])
+        metadata["NWBFile"]["session_start_time"] = session_start_time
+        metadata["NWBFile"]["session_id"] = self.eid
+        metadata["Subject"]["subject_id"] = session_metadata["subject"]
+
+        return metadata
 
     def temporally_align_data_interfaces(self, metadata: dict | None = None, conversion_options: dict | None = None):
         if "ImagingBlue" in self.data_interface_objects:
