@@ -1,6 +1,5 @@
 """Primary script to run to convert an entire session for of data using the NWBConverter."""
 
-import datetime
 import json
 import time
 from pathlib import Path
@@ -11,6 +10,7 @@ from neuroconv.utils import dict_deep_update, load_dict_from_file
 from pynwb import read_nwb
 
 from ibl_widefield_to_nwb.widefield2025 import WidefieldRawNWBConverter
+from ibl_widefield_to_nwb.widefield2025.conversion import get_raw_behavior_interfaces
 from ibl_widefield_to_nwb.widefield2025.datainterfaces import WidefieldImagingInterface
 from ibl_widefield_to_nwb.widefield2025.utils import (
     _build_nidq_metadata_from_wiring,
@@ -27,6 +27,7 @@ def convert_raw_session(
     processed_data_dir_path: str | Path,
     functional_wavelength_nm: int,
     isosbestic_wavelength_nm: int,
+    one_api_kwargs: dict,
     force_cache: bool = False,
     stub_test: bool = False,
     append_on_disk_nwbfile: bool = False,
@@ -48,6 +49,8 @@ def convert_raw_session(
         Wavelength (in nm) for the functional (calcium) imaging data.
     isosbestic_wavelength_nm: int
         Wavelength (in nm) for the isosbestic imaging data.
+    one_api_kwargs: dict
+        Keyword arguments to initialize the interfaces that require ONE API access.
     force_cache: bool, default: False
         If True, force rebuilding of the cache even if it already exists.
     stub_test: bool, default: False
@@ -158,14 +161,16 @@ def convert_raw_session(
     )
 
     # Add Behavior
-    # source_data.update(dict(Behavior=dict()))
-    # conversion_options.update(dict(Behavior=dict()))
+    behavior_interfaces = get_raw_behavior_interfaces(**one_api_kwargs)
+    data_interfaces.update(behavior_interfaces)
 
     # ========================================================================
     # STEP 3: Create converter
     # ========================================================================
 
     converter = WidefieldRawNWBConverter(
+        one=one_api_kwargs["one"],
+        eid=one_api_kwargs["eid"],
         data_interfaces=data_interfaces,
         processed_data_folder_path=processed_data_dir_path,
     )
@@ -176,8 +181,10 @@ def convert_raw_session(
 
     # Add datetime to conversion
     metadata = converter.get_metadata()
-    date = datetime.datetime(year=2020, month=1, day=1, tzinfo=ZoneInfo("US/Eastern"))
-    metadata["NWBFile"]["session_start_time"] = date
+    session_start_time = metadata["NWBFile"]["session_start_time"]
+    if session_start_time.tzinfo is None:
+        session_start_time = session_start_time.replace(tzinfo=ZoneInfo("US/Eastern"))
+    metadata["NWBFile"]["session_start_time"] = session_start_time
 
     # Update default metadata with the editable in the corresponding yaml file
     editable_metadata_path = Path(__file__).parent.parent / "_metadata" / "widefield_general_metadata.yaml"
@@ -191,8 +198,6 @@ def convert_raw_session(
     # Dynamically build metadata based on wiring.json (maps devices to actual channel IDs)
     nidq_metadata = _build_nidq_metadata_from_wiring(wiring=wiring, device_metadata=nidq_device_metadata)
     metadata = dict_deep_update(metadata, nidq_metadata)
-
-    metadata["Subject"]["subject_id"] = "a_subject_id"  # Modify here or in the yaml file
 
     # ========================================================================
     # STEP 5: Write NWB file to disk
