@@ -47,7 +47,7 @@ def build_frame_cache(folder_path: DirectoryPath, cache_folder_path: DirectoryPa
         print(f"Frame cache already exists at {cache_folder_path}, skipping rebuild.")
         return cache_folder_path
 
-    movie_file_paths = list(folder_path.glob("*.frames.mov"))
+    movie_file_paths = list(folder_path.glob("imaging.frames.mov"))
     if len(movie_file_paths) == 0:
         raise FileNotFoundError(f"No .frames.mov files found in folder: {folder_path}")
     elif len(movie_file_paths) > 1:
