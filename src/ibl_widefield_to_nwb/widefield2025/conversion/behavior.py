@@ -35,6 +35,7 @@ def get_processed_behavior_interfaces(
             PassiveRFMInterface,
             PupilTrackingInterface,
             RoiMotionEnergyInterface,
+            SessionEpochsInterface,
             WheelInterface,
         )
     except ImportError as e:
@@ -92,6 +93,11 @@ def get_processed_behavior_interfaces(
             )
         else:
             print(f"ROI motion energy data for camera '{camera_name}' not available or failed to load, skipping...")
+
+    # Session epochs (high-level task vs passive phases)
+    if SessionEpochsInterface.check_availability(one, eid)["available"]:
+        data_interfaces["SessionEpochs"] = SessionEpochsInterface(one=one, session=eid)
+
     return data_interfaces
 
 
@@ -124,7 +130,7 @@ def get_raw_behavior_interfaces(
 
     try:
         from ibl_to_nwb.bwm_to_nwb import get_camera_name_from_file
-        from ibl_to_nwb.datainterfaces import RawVideoInterface
+        from ibl_to_nwb.datainterfaces import RawVideoInterface, SessionEpochsInterface
     except ImportError as e:
         raise ImportError(
             "ibl_to_nwb is required for processed behavior conversion. "
@@ -150,5 +156,9 @@ def get_raw_behavior_interfaces(
             data_interfaces[f"RawVideo_{camera_name}"] = RawVideoInterface(camera_name=camera_view, **interface_kwargs)
         else:
             print(f"Raw video data for camera '{camera_name}' not available or failed to load, skipping...")
+
+    # Session epochs (high-level task vs passive phases)
+    if SessionEpochsInterface.check_availability(one, eid)["available"]:
+        data_interfaces["SessionEpochs"] = SessionEpochsInterface(one=one, session=eid)
 
     return data_interfaces
