@@ -109,3 +109,66 @@ def get_processed_behavior_interfaces(
         data_interfaces["SessionEpochs"] = SessionEpochsInterface(one=one, session=eid)
 
     return data_interfaces
+
+
+def get_raw_behavior_interfaces(
+    one: ONE,
+    eid: str,
+    nwbfiles_folder_path: str | Path,
+    subject_id: str,
+) -> dict:
+    """
+    Returns a dictionary of data interfaces for raw behavior data for a given session.
+
+    Parameters
+    ----------
+
+    one: ONE
+        An instance of the ONE API to access data.
+    eid: str
+        The session ID.
+    nwbfiles_folder_path: str or Path
+        Path to the directory to save the output NWB file.
+    subject_id: str
+        The subject ID.
+
+    Returns
+    -------
+    dict
+        A dictionary where keys are interface names and values are corresponding data interface instances.
+    """
+
+    try:
+        from ibl_to_nwb.bwm_to_nwb import get_camera_name_from_file
+        from ibl_to_nwb.datainterfaces import RawVideoInterface, SessionEpochsInterface
+    except ImportError as e:
+        raise ImportError(
+            "ibl_to_nwb is required for processed behavior conversion. "
+            # TODO update URL
+            "Please install it from https://github.com/h-mayorquin/IBL-to-nwb/blob/heberto_conversion."
+        ) from e
+
+    data_interfaces = dict()
+    interface_kwargs = dict(
+        one=one,
+        session=eid,
+        subject_id=subject_id,
+        nwbfiles_folder_path=nwbfiles_folder_path,
+    )
+
+    camera_files = one.list_datasets(eid, filename="*Camera.raw.mp4*")
+    for camera_file in camera_files:
+        camera_name = get_camera_name_from_file(camera_file)
+        camera_view = re.search(r"(left|right|body)", camera_name).group(1)
+        if camera_view is None:
+            raise ValueError(f"Unexpected camera name '{camera_name}' extracted from file '{camera_file}'")
+        if RawVideoInterface.check_availability(one=one, eid=eid, camera_name=camera_view)["available"]:
+            data_interfaces[f"RawVideo_{camera_name}"] = RawVideoInterface(camera_name=camera_view, **interface_kwargs)
+        else:
+            print(f"Raw video data for camera '{camera_name}' not available or failed to load, skipping...")
+
+    # Session epochs (high-level task vs passive phases)
+    if SessionEpochsInterface.check_availability(one, eid)["available"]:
+        data_interfaces["SessionEpochs"] = SessionEpochsInterface(one=one, session=eid)
+
+    return data_interfaces
