@@ -25,10 +25,9 @@ def get_processed_behavior_interfaces(
     """
 
     try:
-        from ibl_to_nwb.bwm_to_nwb import get_camera_name_from_file
         from ibl_to_nwb.datainterfaces import (
             BrainwideMapTrialsInterface,
-            IblPoseEstimationInterface,  # not working, need to investigate
+            IblPoseEstimationInterface,
             LickInterface,
             PassiveIntervalsInterface,
             PassiveReplayStimInterface,
@@ -36,7 +35,9 @@ def get_processed_behavior_interfaces(
             PupilTrackingInterface,
             RoiMotionEnergyInterface,
             SessionEpochsInterface,
-            WheelInterface,
+            WheelKinematicsInterface,
+            WheelMovementsInterface,
+            WheelPositionInterface,
         )
     except ImportError as e:
         raise ImportError(
@@ -49,7 +50,9 @@ def get_processed_behavior_interfaces(
     interface_kwargs = dict(one=one, session=eid)
 
     data_interfaces["BrainwideMapTrials"] = BrainwideMapTrialsInterface(**interface_kwargs)
-    data_interfaces["Wheel"] = WheelInterface(**interface_kwargs)
+    data_interfaces["WheelPosition"] = WheelPositionInterface(**interface_kwargs)
+    data_interfaces["WheelMovements"] = WheelMovementsInterface(**interface_kwargs)
+    data_interfaces["WheelKinematics"] = WheelKinematicsInterface(**interface_kwargs)
 
     # Passive period data - add each interface if its data is available
     if PassiveIntervalsInterface.check_availability(one, eid)["available"]:
@@ -64,19 +67,26 @@ def get_processed_behavior_interfaces(
     if one.list_datasets(eid=eid, collection="alf", filename="licks*"):
         data_interfaces["Lick"] = LickInterface(**interface_kwargs)
 
+    camera_name_pattern = r"(leftCamera|rightCamera|bodyCamera)"
     pose_estimation_files = set([Path(f).name for f in one.list_datasets(eid=eid, filename="*.dlc*")])
     for pose_estimation_file in pose_estimation_files:
-        camera_name = get_camera_name_from_file(pose_estimation_file)
-        if IblPoseEstimationInterface.check_availability(one=one, eid=eid, camera_name=camera_name)["available"]:
+        camera_name = re.search(pattern=camera_name_pattern, string=pose_estimation_file).group(1)
+        pose_estimation_availability = IblPoseEstimationInterface.check_availability(
+            one=one, eid=eid, camera_name=camera_name
+        )
+        if pose_estimation_availability["available"]:
+            tracker = "lightningPose"
+            if pose_estimation_availability["alternative_used"] == "dlc":
+                tracker = "dlc"
             data_interfaces[f"PoseEstimation_{camera_name}"] = IblPoseEstimationInterface(
-                camera_name=camera_name, tracker="lightningPose", **interface_kwargs
+                camera_name=camera_name, tracker=tracker, **interface_kwargs
             )
         else:
             print(f"Pose estimation data for camera '{camera_name}' not available or failed to load, skipping...")
 
     pupil_tracking_files = one.list_datasets(eid=eid, filename="*features*")
     for pupil_tracking_file in pupil_tracking_files:
-        camera_name = get_camera_name_from_file(pupil_tracking_file)
+        camera_name = re.search(pattern=camera_name_pattern, string=pupil_tracking_file).group(1)
         if PupilTrackingInterface.check_availability(one=one, eid=eid, camera_name=camera_name)["available"]:
             data_interfaces[f"PupilTracking_{camera_name}"] = PupilTrackingInterface(
                 camera_name=camera_name, **interface_kwargs
@@ -86,7 +96,7 @@ def get_processed_behavior_interfaces(
 
     roi_motion_energy_files = one.list_datasets(eid=eid, filename="*ROIMotionEnergy.npy*")
     for roi_motion_energy_file in roi_motion_energy_files:
-        camera_name = get_camera_name_from_file(roi_motion_energy_file)
+        camera_name = re.search(pattern=camera_name_pattern, string=roi_motion_energy_file).group(1)
         if RoiMotionEnergyInterface.check_availability(one=one, eid=eid, camera_name=camera_name)["available"]:
             data_interfaces[f"RoiMotionEnergy_{camera_name}"] = RoiMotionEnergyInterface(
                 camera_name=camera_name, **interface_kwargs
