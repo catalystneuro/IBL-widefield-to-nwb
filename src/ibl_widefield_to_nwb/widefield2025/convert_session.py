@@ -143,7 +143,7 @@ if __name__ == "__main__":
     # eid = "d34a502f-bd06-471f-8334-df41f785e1d9" error 404 for raw data
     eid = "2864dca1-38d8-464c-9777-f6fdfd5e63b5"
 
-    mode = "raw"  # Choose between "raw" or "processed" mode
+    mode = "processed"  # Choose between "raw" or "processed" mode
 
     session_to_nwb(
         one=one,
