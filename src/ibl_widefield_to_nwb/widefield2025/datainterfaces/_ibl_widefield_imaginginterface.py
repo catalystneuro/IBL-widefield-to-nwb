@@ -8,13 +8,16 @@ from neuroconv.datainterfaces.ophys.baseimagingextractorinterface import (
 from neuroconv.utils import DeepDict, dict_deep_update, load_dict_from_file
 from pydantic import DirectoryPath
 
+from ibl_widefield_to_nwb.widefield2025.datainterfaces._base_ibl_interface import (
+    BaseIBLDataInterface,
+)
 from ibl_widefield_to_nwb.widefield2025.datainterfaces._ibl_widefield_imagingextractor import (
     TRANSPOSE_OUTPUT,
     WidefieldImagingExtractor,
 )
 
 
-class WidefieldImagingInterface(BaseImagingExtractorInterface):
+class WidefieldImagingInterface(BaseImagingExtractorInterface, BaseIBLDataInterface):
     """Data Interface for WidefieldImagingExtractor."""
 
     display_name = "IBL Widefield Imaging"
@@ -24,6 +27,30 @@ class WidefieldImagingInterface(BaseImagingExtractorInterface):
     @classmethod
     def get_extractor_class(cls):
         return WidefieldImagingExtractor
+
+    @classmethod
+    def get_data_requirements(cls) -> dict:
+        """
+        Declare exact data files required for raw Widefield data.
+
+        Returns
+        -------
+        dict
+            Data requirements specification with exact file paths
+        """
+        return {
+            "one_objects": [],  # Uses load_dataset directly, not load_object
+            "exact_files_options": {
+                "standard": [
+                    "raw_widefield_data/imaging.frames.mov",
+                    "raw_widefield_data/widefieldChannels.wiring.htsv",
+                    "raw_widefield_data/widefieldEvents.raw.camlog",
+                    # For aligned timestamps
+                    "alf/widefield/imaging.times.npy",
+                    "alf/widefield/imaging.imagingLightSource.npy",
+                ]
+            },
+        }
 
     def __init__(
         self,

@@ -26,6 +26,9 @@ Repository="https://github.com/catalystneuro/IBL-widefield-to-nwb"
 widefield2025 = [
   "neuroconv==0.9.0",
   "roiextractors==0.7.2",
+  # Behavior interfaces from https://github.com/h-mayorquin/IBL-to-nwb/tree/heberto_conversion
+  "ndx-ibl-bwm @ git+https://github.com/int-brain-lab/ndx-ibl-bwm.git",
+  "ibl-to-nwb @ git+https://github.com/h-mayorquin/IBL-to-nwb.git@heberto_conversion",
   "ndx-spatial-transformation @ git+https://github.com/catalystneuro/ndx-spatial-transformation.git@main", # TODO: update to stable release once pushed to PyPI
   "ndx-anatomical-localization @ git+https://github.com/h-mayorquin/ndx-anatomical-localization.git@add_canonical_ccf_space", # TODO: change from fork to main repo when merged
 ]

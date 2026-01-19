@@ -1,4 +1,3 @@
-import datetime
 import time
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -6,6 +5,10 @@ from zoneinfo import ZoneInfo
 from neuroconv.utils import dict_deep_update, load_dict_from_file
 
 from ibl_widefield_to_nwb.widefield2025 import WidefieldProcessedNWBConverter
+from ibl_widefield_to_nwb.widefield2025.conversion import (
+    get_processed_behavior_interfaces,
+)
+from ibl_widefield_to_nwb.widefield2025.datainterfaces import WidefieldSVDInterface
 
 
 def convert_processed_session(
@@ -13,6 +16,7 @@ def convert_processed_session(
     processed_data_dir_path: str | Path,
     functional_wavelength_nm: int,
     isosbestic_wavelength_nm: int,
+    one_api_kwargs: dict,
     stub_test: bool = False,
     append_on_disk_nwbfile: bool = False,
 ):
@@ -39,6 +43,8 @@ def convert_processed_session(
         Wavelength (in nm) for the functional imaging data.
     isosbestic_wavelength_nm: int
         Wavelength (in nm) for the isosbestic imaging data.
+    one_api_kwargs: dict
+        Keyword arguments to initialize the interfaces that require ONE API access.
     stub_test: bool, default: False
         Whether to run a stub test (process a smaller subset of data for testing purposes).
     append_on_disk_nwbfile: bool, default: False
@@ -53,15 +59,19 @@ def convert_processed_session(
     if nwbfile_path.exists() and not append_on_disk_nwbfile:
         overwrite = True
 
-    session_id = "subject_identifier_usually"
-
-    source_data = dict()
+    data_interfaces = dict()
     conversion_options = dict()
 
-    # Add Segmentation
-    source_data.update(
-        dict(SVDCalcium=dict(folder_path=processed_data_dir_path, excitation_wavelength_nm=functional_wavelength_nm))
+    # Add SVD interfaces
+    data_interfaces["SVDCalcium"] = WidefieldSVDInterface(
+        folder_path=processed_data_dir_path,
+        excitation_wavelength_nm=functional_wavelength_nm,
     )
+    data_interfaces["SVDIsosbestic"] = WidefieldSVDInterface(
+        folder_path=processed_data_dir_path,
+        excitation_wavelength_nm=isosbestic_wavelength_nm,
+    )
+
     processed_data_conversion_options = dict(
         stub_test=stub_test,
         include_roi_centroids=False,
@@ -71,9 +81,6 @@ def convert_processed_session(
         dict(
             SVDCalcium=dict(plane_segmentation_name="SVDTemporalComponentsCalcium", **processed_data_conversion_options)
         )
-    )
-    source_data.update(
-        dict(SVDIsosbestic=dict(folder_path=processed_data_dir_path, excitation_wavelength_nm=isosbestic_wavelength_nm))
     )
     conversion_options.update(
         dict(
@@ -90,15 +97,17 @@ def convert_processed_session(
         conversion_options.update(dict(Landmarks=dict()))
 
     # Add Behavior
-    # source_data.update(dict(Behavior=dict()))
-    # conversion_options.update(dict(Behavior=dict()))
+    behavior_interfaces = get_processed_behavior_interfaces(**one_api_kwargs)
+    data_interfaces.update(behavior_interfaces)
 
-    converter = WidefieldProcessedNWBConverter(source_data=source_data)
+    converter = WidefieldProcessedNWBConverter(**one_api_kwargs, data_interfaces=data_interfaces)
 
     # Add datetime to conversion
     metadata = converter.get_metadata()
-    date = datetime.datetime(year=2020, month=1, day=1, tzinfo=ZoneInfo("US/Eastern"))
-    metadata["NWBFile"]["session_start_time"] = date
+    session_start_time = metadata["NWBFile"]["session_start_time"]
+    if session_start_time.tzinfo is None:
+        session_start_time = session_start_time.replace(tzinfo=ZoneInfo("US/Eastern"))
+    metadata["NWBFile"]["session_start_time"] = session_start_time
 
     # Update default metadata with the editable in the corresponding yaml file
     editable_metadata_path = Path(__file__).parent.parent / "_metadata" / "widefield_general_metadata.yaml"
@@ -106,7 +115,6 @@ def convert_processed_session(
     metadata = dict_deep_update(metadata, editable_metadata)
 
     metadata["Subject"]["subject_id"] = "a_subject_id"  # Modify here or in the yaml file
-    metadata["NWBFile"]["session_id"] = session_id
 
     print(f"Writing to NWB '{nwbfile_path}' ...")
     conversion_start = time.time()
