@@ -3,6 +3,7 @@ from pathlib import Path
 
 from ibl_widefield_to_nwb.widefield2025.datainterfaces import (
     IblNIDQInterface,
+    IblWidefieldLandmarksInterface,
     WidefieldImagingInterface,
     WidefieldSVDInterface,
 )
@@ -61,7 +62,8 @@ def download_widefield_session(
             widefield_session_files.extend(processed_widefield_files)
 
             # Landmarks data
-            # TODO: add landmarks interface here
+            landmarks_files = IblWidefieldLandmarksInterface.download_data(one=one, eid=eid, download_only=True)
+            widefield_session_files.extend(landmarks_files)
 
         case _:
             raise ValueError(f"Mode '{mode}' not recognized. Use 'raw' or 'processed'.")

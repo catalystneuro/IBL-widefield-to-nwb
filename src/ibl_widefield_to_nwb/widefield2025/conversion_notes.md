@@ -14,6 +14,9 @@
   - [Expected input folder structure (processed)](#processed-expected-input)
   - [How data are written to NWB (processed)](#processed-how-data-written)
   - [Example metadata (processed)](#example-metadata-processed)
+- [Widefield landmarks and alignment to Allen CCF](#widefield-landmarks-and-alignment-to-allen-ccf)
+  - [Expected input (landmarks)](#landmarks-expected-input)
+  - [How landmarks are written to NWB](#landmarks-how-data-written)
 
 <a name="raw-expected-input"></a>
 ## Converting raw IBL widefield data to NWB format
@@ -192,7 +195,7 @@ Haemodynamically Corrected SVD Temporal Components:
 - The summary images from `widefieldChannels.frameAverage` are written as height x width arrays.
 
 <a name="example-metadata-processed"></a>
-Example metadata:
+## Example metadata (processed)
 
 ```yaml
 Ophys:
@@ -255,3 +258,35 @@ Ophys:
         name: MeanImageIsosbestic
         description: The mean image under Violet (405 nm) excitation across the imaging session.
 ```
+
+<a name="widefield-landmarks-and-alignment-to-allen-ccf"></a>
+# Widefield landmarks and alignment to Allen CCF
+
+The `widefieldLandmarks.dorsalCortex.json` file contains user-defined anatomical landmarks and a similarity transform that align widefield summary images to the Allen Common Coordinate Framework (CCF).
+
+<a name="landmarks-expected-input"></a>
+## Expected input (landmarks)
+
+Required keys and structure:
+
+- `transform`
+  - A similarity transform object that maps from the source image space to the Allen CCF registered space.
+- `landmarks_match`
+  - Table-like structure with fields `x`, `y` (in pixels), `name`, and `color` describing landmarks in the **source image** (mean widefield image) coordinate system.
+- `landmarks_im`
+  - Table-like structure with fields `x`, `y` (in pixels), `name`, and `color` describing the corresponding landmarks in the **atlas/registered image** coordinate system.
+- `landmarks`
+  - Table-like structure with fields `x`, `y` (in mm), `name`, and `color` that holds landmarks in the Allen-registered anatomical space.
+
+<a name="landmarks-how-data-written"></a>
+## How landmarks are written to NWB
+
+The `IBLWidefieldLandmarksInterface` performs the following steps:
+
+- Locates the `ophys` processing module on the NWBFile and ensures that the processed widefield data (added via `IBLWidefieldSVDInterface`) have already created the `SummaryImages` container with a `MeanImage` (or other configured `source_image_name`).
+- Reads the source mean image, applies the similarity transform from the JSON (`transform`), and writes the transformed image as a new `GrayscaleImage` named `MeanImageTransformed` inside an `Images` container called `TransformedImages` in the same `ophys` module.
+- Creates a `Landmarks` table (from `ndx_spatial_transformation`) linking the source and transformed images and populates rows using `landmarks_match` (source coordinates) and `landmarks_im` (target/atlas coordinates); an optional `color` column is added if present.
+- Builds a `SpatialTransformationMetadata` object and attaches a `SimilarityTransformation` constructed from the `transform` (rotation matrix, translation vector, and scale), and associates the `Landmarks` table with this metadata.
+- Adds anatomical localization information using `ndx_anatomical_localization`: a `Localization` object, an `AllenCCFv3Space` space, and an `AnatomicalCoordinatesTable` named `CCFLocalization` that stores `[x, y, z, brain_region]` for each row in the `landmarks` table (with `z` set to NaN for dorsal cortex 2D data).
+
+These objects are stored as lab metadata on the NWBFile and can be used downstream to interpret widefield data in Allen CCF coordinates.

@@ -8,7 +8,10 @@ from ibl_widefield_to_nwb.widefield2025 import WidefieldProcessedNWBConverter
 from ibl_widefield_to_nwb.widefield2025.conversion import (
     get_processed_behavior_interfaces,
 )
-from ibl_widefield_to_nwb.widefield2025.datainterfaces import WidefieldSVDInterface
+from ibl_widefield_to_nwb.widefield2025.datainterfaces import (
+    IblWidefieldLandmarksInterface,
+    WidefieldSVDInterface,
+)
 
 
 def convert_processed_session(
@@ -89,6 +92,12 @@ def convert_processed_session(
             )
         )
     )
+
+    # Add landmarks
+    landmarks_file_path = processed_data_dir_path / "widefieldLandmarks.dorsalCortex.json"
+    if landmarks_file_path.exists():
+        data_interfaces["Landmarks"] = IblWidefieldLandmarksInterface(file_path=landmarks_file_path)
+        conversion_options.update(dict(Landmarks=dict()))
 
     # Add Behavior
     behavior_interfaces = get_processed_behavior_interfaces(**one_api_kwargs)

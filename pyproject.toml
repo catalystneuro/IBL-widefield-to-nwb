@@ -29,6 +29,8 @@ widefield2025 = [
   # Behavior interfaces from https://github.com/h-mayorquin/IBL-to-nwb/tree/heberto_conversion
   "ndx-ibl-bwm @ git+https://github.com/int-brain-lab/ndx-ibl-bwm.git",
   "ibl-to-nwb @ git+https://github.com/h-mayorquin/IBL-to-nwb.git@heberto_conversion",
+  "ndx-spatial-transformation @ git+https://github.com/catalystneuro/ndx-spatial-transformation.git@main", # TODO: update to stable release once pushed to PyPI
+  "ndx-anatomical-localization @ git+https://github.com/catalystneuro/ndx-anatomical-localization.git@main", # TODO: change from fork to main repo when merged
 ]
 
 [build-system]
