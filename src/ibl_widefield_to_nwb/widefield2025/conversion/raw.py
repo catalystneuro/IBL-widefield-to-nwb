@@ -144,27 +144,17 @@ def convert_raw_session(
         )
     )
 
-    # Add NIDQ
-    wiring_file_name = "_spikeglx_ephysData_g0_t0.nidq.wiring.json"
-    wiring_file_paths = list(nidq_data_dir_path.glob(wiring_file_name))
-    if len(wiring_file_paths) != 1:
-        raise FileNotFoundError(
-            f"Expected exactly one wiring json file ('{wiring_file_name}'), found {len(wiring_file_paths)} files."
-        )
-    wiring_file_path = str(wiring_file_paths[0])
-    wiring = json.load(open(wiring_file_path, "r"))
+    # Add sync data (NIDQ for 'raw_ephys_data' collection, DAQ for 'raw_sync_data' collection)
+    if IblNIDQInterface.check_availability(one=one, eid=eid)["available"]:
+        data_interfaces["NIDQ"] = IblNIDQInterface(one=one, session=eid)
+        conversion_options.update({"NIDQ": dict(stub_test=stub_test)})
 
-    analog_channel_groups = _get_analog_channel_groups_from_wiring(wiring=wiring)
-    digital_channel_groups = _get_digital_channel_groups_from_wiring(wiring=wiring)
-    nidq_interface = IblNIDQInterface(
-        folder_path=decompressed_dir_path,
-        analog_channel_groups=analog_channel_groups,
-        digital_channel_groups=digital_channel_groups,
-    )
-
-    if IblWidefieldDAQInterface.check_availability(one=one, eid=eid)["available"]:
+    elif IblWidefieldDAQInterface.check_availability(one=one, eid=eid)["available"]:
         data_interfaces["DAQ"] = IblWidefieldDAQInterface(one=one, session=eid)
         conversion_options.update({"DAQ": dict(stub_test=stub_test)})
+
+    else:
+        print(f"No sync data interface available for session '{eid}'. Sync data will not be included in the NWB file.")
 
 
     # Add Behavior
