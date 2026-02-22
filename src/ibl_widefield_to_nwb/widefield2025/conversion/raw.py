@@ -14,6 +14,7 @@ from ibl_widefield_to_nwb.widefield2025.conversion import get_raw_behavior_inter
 from ibl_widefield_to_nwb.widefield2025.datainterfaces import (
     IblNIDQInterface,
     WidefieldImagingInterface,
+    IblWidefieldDAQInterface,
 )
 from ibl_widefield_to_nwb.widefield2025.utils import (
     _build_nidq_metadata_from_wiring,
@@ -161,14 +162,10 @@ def convert_raw_session(
         digital_channel_groups=digital_channel_groups,
     )
 
-    data_interfaces.update(NIDQ=nidq_interface)
-    conversion_options.update(
-        dict(
-            NIDQ=dict(
-                stub_test=stub_test,
-            )
-        )
-    )
+    if IblWidefieldDAQInterface.check_availability(one=one, eid=eid)["available"]:
+        data_interfaces["DAQ"] = IblWidefieldDAQInterface(one=one, session=eid)
+        conversion_options.update({"DAQ": dict(stub_test=stub_test)})
+
 
     # Add Behavior
     behavior_interfaces = get_raw_behavior_interfaces(**one_api_kwargs)
