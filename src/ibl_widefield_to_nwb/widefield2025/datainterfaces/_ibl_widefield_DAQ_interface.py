@@ -26,6 +26,7 @@ DIGITAL_DEVICE_LABELS = {
     "rotary_encoder_0": {0: "phase_low", 1: "phase_high"},
     "rotary_encoder_1": {0: "phase_low", 1: "phase_high"},
     "audio": {0: "audio_off", 1: "audio_on"},
+    "bpod": {0: "ttl_low", 1: "ttl_high"},
 }
 
 
@@ -283,17 +284,20 @@ class IblWidefieldDAQInterface(BaseIBLDataInterface):
         """
         metadata = metadata or self.get_metadata()
 
-        if self.has_digital_channels:
-            # Load pre-extracted sync data
+        sync_data = None
+        if self.has_digital_channels or self.has_analog_channels:
+            # Load pre-extracted sync data (needed for digital events and analog starting_time)
             sync_data = self.one.load_object(
                 self.session,
                 "sync",
                 collection="raw_sync_data",
             )
+
+        if self.has_digital_channels:
             self._add_digital_channels(nwbfile=nwbfile, metadata=metadata, sync_data=sync_data)
 
         if self.has_analog_channels:
-            self._add_analog_channels(nwbfile=nwbfile, metadata=metadata, stub_test=stub_test)
+            self._add_analog_channels(nwbfile=nwbfile, metadata=metadata, stub_test=stub_test, sync_data=sync_data)
 
     def _add_digital_channels(
         self,
@@ -401,11 +405,49 @@ class IblWidefieldDAQInterface(BaseIBLDataInterface):
 
         return device_to_column
 
+    @staticmethod
+    def _get_sync_channel_index_from_meta(meta: dict) -> int | None:
+        """
+        Determine the sync channel index used in ``_spikeglx_sync.channels.npy``
+        from the SpikeGLX meta file fields ``syncNiChanType`` and ``syncNiChan``.
+
+        SpikeGLX convention (from ``spikeglx._sync_map_from_hardware_config``):
+        - Digital channels (P0.x): channel index = x  (bit in the 16-bit digital word)
+        - Analog  channels (AIx):  channel index = x + 16
+
+        ``syncNiChanType`` encodes the channel type:
+        - 0: no sync
+        - 1: digital (XD) – ``syncNiChan`` is the bit position in the digital word
+        - 2: analog  (XA) – ``syncNiChan`` is the AI channel number; offset by 16
+
+        Parameters
+        ----------
+        meta : dict
+            SpikeGLX metadata dictionary from ``spikeglx.Reader.meta``.
+
+        Returns
+        -------
+        int | None
+            Channel index within the pre-extracted sync data, or ``None`` if the
+            meta file does not contain sync channel information.
+        """
+        chan_type = meta.get("syncNiChanType")
+        chan_num = meta.get("syncNiChan")
+        if chan_type is None or chan_num is None:
+            return None
+        chan_type, chan_num = int(chan_type), int(chan_num)
+        if chan_type == 1:  # digital
+            return chan_num
+        elif chan_type == 2:  # analog (offset by 16 per SpikeGLX convention)
+            return chan_num + 16
+        return None  # chan_type == 0: no sync configured
+
     def _add_analog_channels(
         self,
         nwbfile: NWBFile,
         metadata: dict,
         stub_test: bool = False,
+        sync_data: dict | None = None,
     ):
         """
         Add analog channels from the DAQ board to the NWB file as TimeSeries.
@@ -413,6 +455,11 @@ class IblWidefieldDAQInterface(BaseIBLDataInterface):
         Reads the raw .cbin file using spikeglx.Reader and extracts each analog
         channel as a continuous voltage TimeSeries. Only channels that are actually
         present in the raw data (per the meta file's analogChannelNames) are processed.
+
+        The ``starting_time`` for each TimeSeries is derived from the first event on the
+        SpikeGLX sync channel, whose index is read dynamically from the meta file fields
+        ``syncNiChanType`` and ``syncNiChan``. Falls back to ``0.0`` if the sync channel
+        cannot be determined or has no events.
 
         Parameters
         ----------
@@ -422,6 +469,9 @@ class IblWidefieldDAQInterface(BaseIBLDataInterface):
             Metadata dictionary with TimeSeries information.
         stub_test : bool, default: False
             If True, only reads a small portion of data for testing.
+        sync_data : dict | None, default: None
+            Pre-extracted sync data with keys ``"channels"``, ``"polarities"``, ``"times"``.
+            Used to compute ``starting_time`` from the first event on the sync channel.
         """
         import spikeglx
 
@@ -437,6 +487,33 @@ class IblWidefieldDAQInterface(BaseIBLDataInterface):
         sr = spikeglx.Reader(cbin_path)
 
         try:
+            # Compute starting_time from the first event on the SpikeGLX sync channel.
+            # The sync channel index is read from the meta file (syncNiChanType / syncNiChan)
+            # so the offset works correctly across different hardware configurations.
+            starting_time = 0.0
+            if sync_data is not None:
+                sync_channel_index = self._get_sync_channel_index_from_meta(sr.meta)
+                if sync_channel_index is not None:
+                    mask = sync_data["channels"] == sync_channel_index
+                    if np.any(mask):
+                        starting_time = float(sync_data["times"][mask][0])
+                    else:
+                        warnings.warn(
+                            f"No events found on sync channel {sync_channel_index} "
+                            f"(syncNiChanType={sr.meta.get('syncNiChanType')}, "
+                            f"syncNiChan={sr.meta.get('syncNiChan')}). "
+                            "Analog TimeSeries starting_time defaults to 0.0.",
+                            UserWarning,
+                            stacklevel=2,
+                        )
+                else:
+                    warnings.warn(
+                        "syncNiChanType / syncNiChan not found in meta file. "
+                        "Analog TimeSeries starting_time defaults to 0.0.",
+                        UserWarning,
+                        stacklevel=2,
+                    )
+
             # Build mapping from device name to actual column index in raw data
             device_to_column = self._parse_analog_channel_names(sr.meta)
 
@@ -473,7 +550,7 @@ class IblWidefieldDAQInterface(BaseIBLDataInterface):
 
                 time_series = TimeSeries(
                     data=analog_data,
-                    starting_time=0.0,  # TODO: confirm with IBL
+                    starting_time=starting_time,
                     rate=float(sr.fs),
                     unit="volts",
                     **ts_metadata,
