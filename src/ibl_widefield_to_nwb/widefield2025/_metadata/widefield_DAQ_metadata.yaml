@@ -113,3 +113,14 @@ Events:
     meanings:
       audio_off: Audio stimulus off
       audio_on: Audio stimulus on
+
+  bpod:
+    name: EventsBpodDigital
+    description: >-
+      Digital TTL events from the Bpod behavioral control system.
+      Each event marks a transition on the Bpod digital output line, encoding
+      the timing of behavioral state machine events such as trial start/end,
+      stimulus delivery, and reward dispensing.
+    meanings:
+      ttl_low: Bpod digital output transitioned to LOW
+      ttl_high: Bpod digital output transitioned to HIGH
