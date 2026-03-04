@@ -524,8 +524,6 @@ class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
             atlas_projection=atlas_projection,
             affine_transformation=affine_transformation,
             landmarks=landmarks,
-            anatomical_coordinates_images=[anatomical_coordinates_image],
-            brain_region_masks=[registered_masks, source_masks],
         )
         nwbfile.add_lab_meta_data([atlas_registration])
 
