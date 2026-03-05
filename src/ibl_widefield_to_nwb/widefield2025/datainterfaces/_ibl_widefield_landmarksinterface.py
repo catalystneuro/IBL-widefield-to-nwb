@@ -319,8 +319,8 @@ class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
 
         registered_image = nwbfile.processing["ophys"]["RegisteredImages"]["RegisteredImage"]
         anatomical_coordinates_image = AnatomicalCoordinatesImage(
-            name="RegisteredImageAnatomicalCoordinatesIBLBregma",
-            description="Transformed mean image estimated coordinates in IBL bregma-centered coordinate system.",
+            name="AnatomicalCoordinatesImageIBLBregma",
+            description="Estimated coordinates for each pixel of the registered image in IBL bregma-centered coordinate system.",
             space=self.ibl_bregma_space,
             method="IBL manual annotation",  # TODO: confirm method description
             image=registered_image,
