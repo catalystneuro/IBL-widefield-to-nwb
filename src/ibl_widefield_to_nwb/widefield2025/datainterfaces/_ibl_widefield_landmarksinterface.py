@@ -326,7 +326,7 @@ class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
 
         anatomical_coordinates_image = AnatomicalCoordinatesImage(
             name="AnatomicalCoordinatesImageIBLBregma",
-            description="Transformed mean image estimated coordinates in IBL bregma-centered coordinate system.",
+            description="Estimated coordinates for each pixel of the registered image in IBL bregma-centered coordinate system.",
             space=self.ibl_bregma_space,
             method="IBL manual annotation",  # TODO: confirm method description
             image=registered_image,
