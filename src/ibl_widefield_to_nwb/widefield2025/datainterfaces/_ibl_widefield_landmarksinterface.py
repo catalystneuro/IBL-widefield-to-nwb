@@ -222,7 +222,7 @@ class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
             data=self.atlas_projection,
         )
 
-        images_container_name = "RegisteredImages"
+        images_container_name = "Images"
         if images_container_name not in ophys_module.data_interfaces:
             ophys_module.add(Images(name=images_container_name, description="Contains post-registration FOV images."))
         ophys_module.data_interfaces[images_container_name].add_image(registered_image)
@@ -317,15 +317,22 @@ class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
         brain_region_acronym_image = np.vectorize(label_to_acronym.get)(regions_image)
         brain_region_acronym_image[outside_mask] = "out-of-atlas"
 
-        registered_image = nwbfile.processing["ophys"]["RegisteredImages"]["RegisteredImage"]
+        registered_image = nwbfile.processing["ophys"]["Images"]["RegisteredImage"]
+
+        one_photon_series = None
+        # Processed data doesn't have raw one photon series data.
+        if "OnePhotonSeriesCalcium" in nwbfile.acquisition:
+            one_photon_series = nwbfile.acquisition["OnePhotonSeriesCalcium"]
+
         anatomical_coordinates_image = AnatomicalCoordinatesImage(
-            name="RegisteredImageAnatomicalCoordinatesIBLBregma",
+            name="AnatomicalCoordinatesImageIBLBregma",
             description="Transformed mean image estimated coordinates in IBL bregma-centered coordinate system.",
             space=self.ibl_bregma_space,
             method="IBL manual annotation",  # TODO: confirm method description
             image=registered_image,
-            x=xyz_um_image[:, :, 0],
-            y=xyz_um_image[:, :, 1],
+            localized_entity=one_photon_series,  # link to the source of the coordinates
+            x=xyz_um_image[:, :, 0],  # we need the ccf and not the bregma space, but we keep both
+            y=xyz_um_image[:, :, 1],  # TODO: need to ask Mayo how to compute the CCF micrometers image
             z=xyz_um_image[:, :, 2],
             brain_region=brain_region_acronym_image,
         )
@@ -510,8 +517,8 @@ class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
         # hold links to them alongside the affine transform and landmarks.
         ophys = get_module(nwbfile=nwbfile, name="ophys")
         source_image = ophys[summary_images_name][source_image_name]
-        registered_image = ophys["RegisteredImages"]["RegisteredImage"]
-        atlas_projection = ophys["RegisteredImages"]["AtlasProjectionImage"]
+        registered_image = ophys["Images"]["RegisteredImage"]
+        atlas_projection = ophys["Images"]["AtlasProjectionImage"]
 
         affine_transformation = AffineTransformation(
             name="AffineTransformation",
@@ -535,7 +542,7 @@ class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
         self,
         nwbfile: NWBFile,
         metadata: dict | None,
-        summary_images_name: str = "SummaryImages",
+        summary_images_name: str = "Images",
         source_image_name: str = "MeanImage",
     ) -> None:
         """
@@ -547,7 +554,7 @@ class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
             The NWB file to which the landmarks will be added.
         metadata : dict | None
             Metadata for the NWB file.
-        summary_images_name : str, default: "SummaryImages"
+        summary_images_name : str, default: "Images"
             Name of the container in the NWB file that holds the summary images.
         source_image_name : str, default: "MeanImage"
             Name of the source image within the summary images' container.

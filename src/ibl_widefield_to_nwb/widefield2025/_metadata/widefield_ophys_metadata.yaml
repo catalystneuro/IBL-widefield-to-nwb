@@ -56,8 +56,8 @@ Ophys:
         description: SVD temporal components (denoised/decomposed) of widefield calcium imaging from Violet light (405 nm) excitation.
         unit: n.a.
   SegmentationImages:
-    name: SummaryImages
-    description: Summary images for widefield calcium imaging.
+    name: Images
+    description: Contains pre- and post-registration FOV images.
     SVDTemporalComponentsCalcium:
       mean:
         name: MeanImage
