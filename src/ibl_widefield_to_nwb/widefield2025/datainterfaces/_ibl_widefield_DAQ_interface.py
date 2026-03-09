@@ -466,10 +466,16 @@ class IblWidefieldDAQInterface(BaseIBLDataInterface):
         channel as a continuous voltage TimeSeries. Only channels that are actually
         present in the raw data (per the meta file's analogChannelNames) are processed.
 
-        The ``starting_time`` for each TimeSeries is derived from the first event on the
-        SpikeGLX sync channel, whose index is read dynamically from the meta file fields
-        ``syncNiChanType`` and ``syncNiChan``. Falls back to ``0.0`` if the sync channel
-        cannot be determined or has no events.
+        The ``starting_time`` for each TimeSeries is determined per device:
+
+        1. If the device also appears as a digital channel (i.e. the same signal is
+           wired to both an analog input and a digital port), the first event time on
+           that digital channel is used. This aligns the continuous analog trace to the
+           digital event timestamps that share the same time reference as the widefield
+           imaging times.
+        2. Otherwise, ``starting_time`` falls back to the first event on the SpikeGLX
+           sync channel (read from the meta file fields ``syncNiChanType`` / ``syncNiChan``).
+        3. If neither is available, ``starting_time`` defaults to ``0.0``.
 
         Parameters
         ----------
@@ -481,7 +487,7 @@ class IblWidefieldDAQInterface(BaseIBLDataInterface):
             If True, only reads a small portion of data for testing.
         sync_data : dict | None, default: None
             Pre-extracted sync data with keys ``"channels"``, ``"polarities"``, ``"times"``.
-            Used to compute ``starting_time`` from the first event on the sync channel.
+            Used to compute ``starting_time`` from digital or sync channel events.
         """
         import spikeglx
 
@@ -497,16 +503,14 @@ class IblWidefieldDAQInterface(BaseIBLDataInterface):
         sr = spikeglx.Reader(cbin_path)
 
         try:
-            # Compute starting_time from the first event on the SpikeGLX sync channel.
-            # The sync channel index is read from the meta file (syncNiChanType / syncNiChan)
-            # so the offset works correctly across different hardware configurations.
-            starting_time = 0.0
+            # Fallback starting_time from the SpikeGLX hardware sync channel
+            fallback_starting_time = 0.0
             if sync_data is not None:
                 sync_channel_index = self._get_sync_channel_index_from_meta(sr.meta)
                 if sync_channel_index is not None:
                     mask = sync_data["channels"] == sync_channel_index
                     if np.any(mask):
-                        starting_time = float(sync_data["times"][mask][0])
+                        fallback_starting_time = float(sync_data["times"][mask][0])
                     else:
                         warnings.warn(
                             f"No events found on sync channel {sync_channel_index} "
@@ -545,6 +549,16 @@ class IblWidefieldDAQInterface(BaseIBLDataInterface):
                 # Check if this device has metadata configured
                 if device_name not in timeseries_metadata:
                     continue
+
+                # Use the first digital event of this device as starting_time when available.
+                # This aligns the analog trace to the same time reference as the digital events
+                # (and widefield imaging times). Falls back to the sync channel approach.
+                starting_time = fallback_starting_time
+                if sync_data is not None and device_name in self._digital_channel_groups:
+                    digital_channel_index = self._digital_channel_groups[device_name]["channel_index"]
+                    digital_mask = sync_data["channels"] == digital_channel_index
+                    if np.any(digital_mask):
+                        starting_time = float(sync_data["times"][digital_mask][0])
 
                 column_index = device_to_column[device_name]
                 ts_metadata = timeseries_metadata[device_name]
