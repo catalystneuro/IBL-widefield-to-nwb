@@ -220,6 +220,16 @@ class IblWidefieldDAQInterface(BaseIBLDataInterface):
         """
         metadata = super().get_metadata()
 
+        # Device metadata
+        device = dict(
+            name="WidefieldDAQBoard",
+            description="National Instruments USB-6356 multifunction DAQ device used to record widefield camera "
+            "frame triggers and behavioral synchronization signals. Camera acquisition managed by labcams.",
+            manufacturer="National Instruments",
+        )
+
+        metadata["Devices"] = [device]
+
         # Load static metadata from YAML
         static_metadata = load_dict_from_file(
             file_path=Path(__file__).parent.parent / "_metadata" / "widefield_DAQ_metadata.yaml"
