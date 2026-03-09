@@ -44,11 +44,14 @@ class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
             "exact_files_options": {
                 "standard": [
                     "alf/widefield/widefieldLandmarks.dorsalCortex.json",
+                    "alf/widefield/widefieldChannels.frameAverage.npy",
+                    "alf/widefield/imagingLightSource.properties.htsv",
+                    "alf/widefield/imaging.imagingLightSource.npy",
                 ]
             },
         }
 
-    def __init__(self, one: ONE, session: str):
+    def __init__(self, one: ONE, session: str, excitation_wavelength_nm: int = 470):
         """
         Initialize the IblWidefieldLandmarksInterface.
 
@@ -58,7 +61,12 @@ class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
             The ONE instance for data access.
         session : str
             The session ID (eid) for which to load the landmarks data.
+        excitation_wavelength_nm : int, default: 470
+            Excitation wavelength (nm) of the channel whose frame average is used as the
+            source image for atlas registration. Only relevant when no pre-existing mean
+            image is found in the NWB file (e.g. in the raw conversion pipeline).
         """
+        self.excitation_wavelength_nm = excitation_wavelength_nm
 
         session_path = one.eid2path(session)
 
@@ -169,6 +177,82 @@ class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
 
         return landmarks_table
 
+    def _load_mean_image_data(self) -> np.ndarray:
+        """Load the mean (frame-average) image for the configured excitation wavelength.
+
+        Replicates the logic used by ``WidefieldSVDExtractor._load_mean_image`` so that
+        the landmarks interface can obtain a source image even when the SVD processed data
+        has not been written to the NWB file (e.g. in the raw conversion pipeline).
+
+        Returns
+        -------
+        np.ndarray
+            2-D mean image array with shape ``(height, width)``.
+        """
+        alf_folder = self.file_path.parent
+
+        frame_average_file = alf_folder / "widefieldChannels.frameAverage.npy"
+        props_file = alf_folder / "imagingLightSource.properties.htsv"
+        light_source_file = alf_folder / "imaging.imagingLightSource.npy"
+
+        all_props = pd.read_csv(props_file)
+        channel_props = all_props[all_props["wavelength"] == self.excitation_wavelength_nm]
+        if len(channel_props) == 0:
+            raise ValueError(
+                f"No channel found for excitation wavelength {self.excitation_wavelength_nm} nm " f"in '{props_file}'."
+            )
+        channel_id = channel_props.iloc[0]["channel_id"]
+
+        light_sources = np.load(light_source_file, allow_pickle=True)
+        frame_indices = np.where(light_sources == channel_id)[0]
+        if len(frame_indices) == 0:
+            raise ValueError(
+                f"No frames found for channel_id {channel_id} (wavelength "
+                f"{self.excitation_wavelength_nm} nm) in '{light_source_file}'."
+            )
+        first_frame_index = frame_indices[0]
+
+        mean_images = np.load(frame_average_file)  # shape: (n_frames, height, width)
+        mean_image = mean_images[first_frame_index, ...]
+        return mean_image
+
+    def _ensure_source_image_in_nwbfile(
+        self,
+        nwbfile: NWBFile,
+        summary_images_name: str,
+        source_image_name: str,
+    ) -> None:
+        """Ensure the source image used for registration exists in the ophys module.
+
+        If the ``Images`` container or the named image is absent (as is the case in the
+        raw conversion pipeline where no SVD data is written), the method loads the mean
+        frame-average image from disk and inserts it into the ophys module.
+
+        Parameters
+        ----------
+        nwbfile : NWBFile
+            Target NWB file.
+        summary_images_name : str
+            Name of the ``Images`` container in the ``ophys`` module.
+        source_image_name : str
+            Name of the source image within that container.
+        """
+        ophys_module = get_module(nwbfile=nwbfile, name="ophys")
+
+        if summary_images_name not in ophys_module.data_interfaces:
+            ophys_module.add(Images(name=summary_images_name, description="Summary images from widefield imaging."))
+
+        images_container = ophys_module.data_interfaces[summary_images_name]
+        if source_image_name not in images_container.images:
+            mean_image_data = self._load_mean_image_data()
+            images_container.add_image(
+                GrayscaleImage(
+                    name=source_image_name,
+                    description="Mean fluorescence image computed as the per-channel frame average.",
+                    data=mean_image_data,
+                )
+            )
+
     def _add_registered_images(
         self,
         nwbfile: NWBFile,
@@ -177,35 +261,28 @@ class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
     ):
         """Build registered and atlas projection images, adding them to the ophys module.
 
-        Validates that the required source image exists, applies the affine transform,
-        creates a ``RegisteredImages`` container in the ``ophys`` module, and populates
-        it with the registered FOV image and the Allen atlas projection image.
+        If the source image does not already exist in the ophys module (e.g. in the raw
+        conversion pipeline), it is loaded from the frame-average file on disk before the
+        affine transform is applied.  Creates an ``Images`` container in the
+        ``ophys`` module and populates it with the registered FOV image and the Allen atlas
+        projection image.
 
         Parameters
         ----------
         nwbfile : NWBFile
-            The NWB file whose ``ophys`` module receives the ``RegisteredImages`` container.
+            The NWB file whose ``ophys`` module receives the ``Images`` container.
         summary_images_name : str
-            Name of the existing ``Images`` container in the ``ophys`` module.
+            Name of the ``Images`` container in the ``ophys`` module.
         source_image_name : str
             Name of the source image within that container.
 
-        Returns
-        -------
-        tuple[GrayscaleImage, GrayscaleImage, GrayscaleImage, np.ndarray, np.ndarray]
-            ``(source_image, registered_image, atlas_projection,
-               source_image_data, registered_image_data)``
         """
+        self._ensure_source_image_in_nwbfile(
+            nwbfile=nwbfile,
+            summary_images_name=summary_images_name,
+            source_image_name=source_image_name,
+        )
         ophys_module = get_module(nwbfile=nwbfile, name="ophys")
-        if summary_images_name not in ophys_module.data_interfaces:
-            raise ValueError(
-                f"The NWB file must contain '{summary_images_name}' container in the 'ophys' module. "
-                "First add the processed data using IBLWidefieldSVDInterface."
-            )
-        if source_image_name not in ophys_module.data_interfaces[summary_images_name].images:
-            raise ValueError(
-                f"The '{summary_images_name}' container must contain an image named '{source_image_name}'."
-            )
 
         source_image = ophys_module[summary_images_name][source_image_name]
         self.source_image = source_image.data[:]
