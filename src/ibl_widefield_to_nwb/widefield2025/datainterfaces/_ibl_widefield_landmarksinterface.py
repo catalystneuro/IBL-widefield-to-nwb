@@ -1,3 +1,4 @@
+import pandas as pd
 import numpy as np
 from iblatlas.atlas import AllenAtlas, BrainCoordinates
 from ndx_anatomical_localization import (
@@ -384,7 +385,7 @@ class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
         # Convert to CCF microns
         atlas = AllenAtlas(res_um=10)
         xyz_m = xyz_um * 1e-6  # convert from um to m for atlas conversion
-        ccf_um = atlas.xyz2ccf(xyz=xyz_m, ccf_order="apdvml").astype(np.float64)
+        ccf_um = atlas.xyz2ccf(xyz=xyz_m, ccf_order="apdvml", mode="clip").astype(np.float64)
 
         regions = self.atlas_projection[ref_idx[:, 1], ref_idx[:, 0]]
         regions_image = regions.reshape(self.registered_image.shape[0], self.registered_image.shape[1])
