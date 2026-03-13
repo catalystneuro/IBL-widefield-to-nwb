@@ -381,9 +381,15 @@ class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
         xyz_um = brain_coordinates_warp.i2xyz(coords_flat)
         ref_idx = brain_coordinates_reference.xyz2i(xyz_um, mode="clip")
 
+        # Convert to CCF microns
+        atlas = AllenAtlas(res_um=10)
+        xyz_m = xyz_um * 1e-6  # convert from um to m for atlas conversion
+        ccf_um = atlas.xyz2ccf(xyz=xyz_m, ccf_order="apdvml").astype(np.float64)
+
         regions = self.atlas_projection[ref_idx[:, 1], ref_idx[:, 0]]
         regions_image = regions.reshape(self.registered_image.shape[0], self.registered_image.shape[1])
         xyz_um_image = xyz_um.reshape(self.registered_image.shape[0], self.registered_image.shape[1], 3)
+        ccf_um_image = ccf_um.reshape(self.registered_image.shape[0], self.registered_image.shape[1], 3)
 
         label_to_allen_id = self.ccf_regions.set_index("label")["allen_id"].to_dict()
         brain_region_id_image = np.vectorize(label_to_allen_id.get)(regions_image)
@@ -401,7 +407,7 @@ class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
         if "OnePhotonSeriesCalcium" in nwbfile.acquisition:
             one_photon_series = nwbfile.acquisition["OnePhotonSeriesCalcium"]
 
-        anatomical_coordinates_image = AnatomicalCoordinatesImage(
+        ibl_anatomical_coordinates_image = AnatomicalCoordinatesImage(
             name="AnatomicalCoordinatesImageIBLBregma",
             description="Estimated coordinates for each pixel of the registered image in IBL bregma-centered coordinate system.",
             space=self.ibl_bregma_space,
@@ -414,7 +420,19 @@ class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
             brain_region=brain_region_acronym_image,
         )
 
-        return anatomical_coordinates_image, brain_region_id_image
+        ccf_anatomical_coordinates_image = AnatomicalCoordinatesImage(
+            name="AnatomicalCoordinatesImageCCFv3",
+            description="Estimated coordinates for each pixel of the registered image in CCFv3 coordinate system.",
+            space=self.allen_ccf_space,
+            method="IBL manual annotation",  # TODO: confirm method description
+            image=registered_image,
+            localized_entity=one_photon_series,  # link to the source of the coordinates
+            x=ccf_um_image[:, :, 0],
+            y=ccf_um_image[:, :, 1],
+            z=ccf_um_image[:, :, 2],
+            brain_region=brain_region_acronym_image,
+        )
+        return ibl_anatomical_coordinates_image, ccf_anatomical_coordinates_image, brain_region_id_image
 
     def _build_brain_region_masks(
         self,
@@ -578,11 +596,15 @@ class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
         localization = nwbfile.lab_meta_data["localization"]
 
         # Build AnatomicalCoordinatesImage + raw brain_region_id array
-        anatomical_coordinates_image, brain_region_id_image = self._build_anatomical_coordinates_image(
-            nwbfile=nwbfile,
-            landmarks=landmarks,
+        ibl_anatomical_coordinates_image, ccf_anatomical_coordinates_image, brain_region_id_image = (
+            self._build_anatomical_coordinates_image(
+                nwbfile=nwbfile,
+                landmarks=landmarks,
+            )
         )
-        localization.add_anatomical_coordinates_images([anatomical_coordinates_image])
+        localization.add_anatomical_coordinates_images(
+            [ibl_anatomical_coordinates_image, ccf_anatomical_coordinates_image]
+        )
 
         # Build BrainRegionMasks for registered and source spaces
         registered_masks, source_masks = self._build_brain_region_masks(brain_region_id_image=brain_region_id_image)
