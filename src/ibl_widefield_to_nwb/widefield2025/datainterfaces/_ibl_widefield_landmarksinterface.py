@@ -355,7 +355,19 @@ class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
         reference_coords_px = landmarks[:][["reference_x", "reference_y"]].values[reference_landmark_index]
 
         image_resolution = float(landmarks["resolution"][0])
-        warp_origin_coords_um = np.r_[warp_coords_px * image_resolution, 0.0]
+
+        # True bregma-relative um coords of the reference landmark (stored in mm in landmarks["landmarks"])
+        xy_mm = self.landmarks["landmarks"][["x", "y"]].values.astype(float)
+        xyz_um_ref_landmark = np.r_[xy_mm[reference_landmark_index] * 1000.0, 0.0]  # mm → um
+        # xyz0 is the coordinate at pixel (0, 0).
+        # i2xyz: coord = xyz0 + dxyz * i, with dxyz = [-resolution, -resolution, resolution].
+        # At the reference landmark pixel: xyz_um_ref_landmark = xyz0 + (-resolution) * warp_coords_px
+        # => xyz0 = xyz_um_ref_landmark + resolution * warp_coords_px
+        warp_origin_coords_um = xyz_um_ref_landmark + np.r_[
+            image_resolution * warp_coords_px[0],
+            image_resolution * warp_coords_px[1],
+            0.0,
+        ]
 
         reference_resolution = self.ccf_regions["resolution"].values.astype(float)[0]  # in um / pixel
         reference_origin_coords_um = np.r_[reference_coords_px * reference_resolution, 0.0]
