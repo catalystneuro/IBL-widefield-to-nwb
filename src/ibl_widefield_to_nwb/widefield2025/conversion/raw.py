@@ -1,24 +1,25 @@
 """Primary script to run to convert an entire session for of data using the NWBConverter."""
 
-import json
 import time
 from pathlib import Path
-from zoneinfo import ZoneInfo
 
-from ibl_to_nwb.utils import decompress_ephys_cbins
-from neuroconv.utils import dict_deep_update, load_dict_from_file
-from pynwb import read_nwb
+from ibl_to_nwb.datainterfaces import RawVideoInterface, SessionEpochsInterface
+from ibl_to_nwb.utils import sanitize_subject_id_for_dandi
+from ndx_ibl import IblMetadata, IblSubject
+from neuroconv.tools import configure_and_write_nwbfile
+from neuroconv.tools.nwb_helpers import get_default_backend_configuration
+from one.api import ONE
+from pynwb import NWBFile, read_nwb
 
 from ibl_widefield_to_nwb.widefield2025 import WidefieldRawNWBConverter
-from ibl_widefield_to_nwb.widefield2025.conversion import get_raw_behavior_interfaces
+from ibl_widefield_to_nwb.widefield2025.conversion import (
+    build_frame_cache,
+    validate_cache,
+)
 from ibl_widefield_to_nwb.widefield2025.datainterfaces import (
     IblNIDQInterface,
+    IblWidefieldLandmarksInterface,
     WidefieldImagingInterface,
-)
-from ibl_widefield_to_nwb.widefield2025.utils import (
-    _build_nidq_metadata_from_wiring,
-    _get_analog_channel_groups_from_wiring,
-    _get_digital_channel_groups_from_wiring,
 )
 
 
@@ -26,8 +27,6 @@ def convert_raw_session(
     eid: str,
     one: ONE,
     nwbfiles_folder_path: str | Path,
-    raw_data_dir_path: str | Path,
-    cache_dir_path: str | Path,
     functional_wavelength_nm: int,
     isosbestic_wavelength_nm: int,
     force_cache: bool = False,
@@ -44,12 +43,7 @@ def convert_raw_session(
         An instance of the ONE API to access data.
     nwbfiles_folder_path: str or Path
         The folder path where the NWB file will be saved. The final NWB file will be saved as:
-        {output_path}/nwbfiles/{full|stub}/sub-{subject_id}/sub-{subject_id}_ses-{eid}_desc-raw_behavior+ophys.nwb
-        Where {full|stub} depends on the 'stub_test' parameter, and {subject_id} is derived from the session metadata.
-    raw_data_dir_path: str or Path
-        Path to the directory containing the raw widefield data for the session.
-    cache_dir_path: str or Path
-        Path to the directory for caching intermediate data.
+        {nwbfiles_folder_path}/{full|stub}/sub-{subject_id}/sub-{subject_id}_ses-{eid}_desc-raw_behavior+ophys.nwb
     functional_wavelength_nm: int
         Wavelength (in nm) for the functional (calcium) imaging data.
     isosbestic_wavelength_nm: int
@@ -63,26 +57,39 @@ def convert_raw_session(
     -------
     Path
         Path to the generated NWB file.
-
     """
-    from ibl_widefield_to_nwb.widefield2025.conversion import (
-        build_frame_cache,
-        validate_cache,
-    )
 
-    data_dir_path = Path(raw_data_dir_path)
-    nwbfile_path = Path(nwbfile_path)
-    nwbfile_path.parent.mkdir(parents=True, exist_ok=True)
+    nwbfiles_folder_path = Path(nwbfiles_folder_path)
 
-    overwrite = False
-    if nwbfile_path.exists() and not append_on_disk_nwbfile:
-        overwrite = True
+    # Setup paths
+    session_info = one.alyx.rest("sessions", "read", id=eid)
+    subject_nickname = session_info.get("subject")
+    if isinstance(subject_nickname, dict):
+        subject_nickname = subject_nickname.get("nickname") or subject_nickname.get("name")
+    if not subject_nickname:
+        subject_nickname = "unknown"
+
+    # Sanitize subject nickname for DANDI compliance (replace underscores with hyphens)
+    subject_id_for_filenames = sanitize_subject_id_for_dandi(subject_nickname)
+
+    # New structure: nwbfiles/{full|stub}/sub-{subject}/*.nwb
+    conversion_mode = "stub" if stub_test else "full"
+    output_dir = nwbfiles_folder_path / conversion_mode / f"sub-{subject_id_for_filenames}"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    nwbfile_path = output_dir / f"sub-{subject_id_for_filenames}_ses-{eid}_desc-raw_behavior+ophys.nwb"
 
     # ========================================================================
-    # STEP 1: Build Frame Cache
+    # STEP 1: Download raw widefield files and build frame cache
     # ========================================================================
 
-    build_frame_cache(folder_path=data_dir_path, cache_folder_path=cache_dir_path, overwrite=force_cache)
+    # Ensure raw widefield files are in the local ONE cache before building the frame cache.
+    # The frame cache builder reads the .mov file directly from disk and cannot use lazy ONE downloads.
+    WidefieldImagingInterface.download_data(one=one, eid=eid, download_only=True)
+
+    raw_data_dir_path = one.eid2path(eid) / "raw_widefield_data"
+    cache_dir_path = raw_data_dir_path / "wf_cache"
+
+    build_frame_cache(folder_path=raw_data_dir_path, cache_folder_path=cache_dir_path, overwrite=force_cache)
     validate_cache(cache_folder_path=cache_dir_path)
 
     # ========================================================================
@@ -136,42 +143,67 @@ def convert_raw_session(
         )
     )
 
-    # Add NIDQ
-    wiring_file_name = "_spikeglx_ephysData_g0_t0.nidq.wiring.json"
-    wiring_file_paths = list(nidq_data_dir_path.glob(wiring_file_name))
-    if len(wiring_file_paths) != 1:
-        raise FileNotFoundError(
-            f"Expected exactly one wiring json file ('{wiring_file_name}'), found {len(wiring_file_paths)} files."
-        )
-    wiring_file_path = str(wiring_file_paths[0])
-    wiring = json.load(open(wiring_file_path, "r"))
+    # Add sync data
+    if IblNIDQInterface.check_availability(one=one, eid=eid)["available"]:
+        data_interfaces["NIDQ"] = IblNIDQInterface(one=one, session=eid)
+        conversion_options.update({"NIDQ": dict(stub_test=stub_test)})
+    else:
+        print(f"No NIDQ sync data available for session '{eid}', skipping.")
 
-    analog_channel_groups = _get_analog_channel_groups_from_wiring(wiring=wiring)
-    digital_channel_groups = _get_digital_channel_groups_from_wiring(wiring=wiring)
-    nidq_interface = IblNIDQInterface(
-        folder_path=decompressed_dir_path,
-        analog_channel_groups=analog_channel_groups,
-        digital_channel_groups=digital_channel_groups,
-    )
+    # Add raw behavioral video
+    for camera_view in ["left", "right", "body"]:
+        has_timestamps = bool(one.list_datasets(eid=eid, filename=f"*{camera_view}Camera.times*"))
+        has_video = bool(one.list_datasets(eid=eid, filename=f"*{camera_view}Camera.raw.mp4*"))
+        if not has_timestamps or not has_video:
+            continue
 
-    data_interfaces.update(NIDQ=nidq_interface)
-    conversion_options.update(
-        dict(
-            NIDQ=dict(
-                stub_test=stub_test,
+        if stub_test:
+            # In stub mode avoid triggering large downloads — only include if already cached
+            session_path = one.eid2path(eid)
+            if (
+                session_path is None
+                or not (session_path / f"raw_video_data/_iblrig_{camera_view}Camera.raw.mp4").exists()
+            ):
+                print(f"Stub mode: {camera_view}Camera video not in cache, skipping.")
+                continue
+
+        result = RawVideoInterface.check_availability(one=one, eid=eid, camera_name=camera_view)
+        if result["available"]:
+            # Pre-download workaround: RawVideoInterface accesses ALF camera files during __init__,
+            # so all required files must be local before the interface is instantiated.
+            try:
+                one.load_object(id=eid, obj=f"{camera_view}Camera", collection="alf", download_only=True)
+            except Exception as e:
+                print(f"Failed to load raw video data for camera '{camera_view}' in session '{eid}': {e}")
+                continue
+            data_interfaces[f"RawVideo_{camera_view}"] = RawVideoInterface(
+                camera_name=camera_view,
+                one=one,
+                session=eid,
+                subject_id=subject_id_for_filenames,
+                nwbfiles_folder_path=nwbfiles_folder_path / conversion_mode,
             )
-        )
-    )
+        else:
+            print(f"Missing data for '{camera_view}Camera': {result['missing_required']}")
 
-    # Add Behavior
-    behavior_interfaces = get_raw_behavior_interfaces(**one_api_kwargs)
-    data_interfaces.update(behavior_interfaces)
+    # Session epochs (high-level task vs passive phases)
+    if SessionEpochsInterface.check_availability(one, eid)["available"]:
+        data_interfaces["SessionEpochs"] = SessionEpochsInterface(one=one, session=eid)
+
+    # Add Landmarks
+    if IblWidefieldLandmarksInterface.check_availability(one=one, eid=eid)["available"]:
+        data_interfaces["Landmarks"] = IblWidefieldLandmarksInterface(one=one, session=eid)
+        conversion_options.update(dict(Landmarks=dict()))
 
     # ========================================================================
     # STEP 4: Create converter
     # ========================================================================
 
-    converter = WidefieldRawNWBConverter(one=one, session=eid, data_interfaces=data_interfaces,)
+    converter = WidefieldRawNWBConverter(
+        one=one,
+        session=eid,
+        data_interfaces=data_interfaces,
+    )
 
     # ========================================================================
     # STEP 5: Get metadata
@@ -179,23 +211,14 @@ def convert_raw_session(
 
     # Add datetime to conversion
     metadata = converter.get_metadata()
-    session_start_time = metadata["NWBFile"]["session_start_time"]
-    if session_start_time.tzinfo is None:
-        session_start_time = session_start_time.replace(tzinfo=ZoneInfo("US/Eastern"))
-    metadata["NWBFile"]["session_start_time"] = session_start_time
 
-    # Update default metadata with the editable in the corresponding yaml file
-    editable_metadata_path = Path(__file__).parent.parent / "_metadata" / "widefield_general_metadata.yaml"
-    editable_metadata = load_dict_from_file(editable_metadata_path)
-    metadata = dict_deep_update(metadata, editable_metadata)
+    # Use IBL-specific Subject metadata to populate NWBFile subject field
+    subject_metadata_for_ndx = metadata.pop("Subject")
+    ibl_subject = IblSubject(**subject_metadata_for_ndx)
 
-    # Update nidq metadata with wiring info
-    nidq_metadata_path = Path(__file__).parent.parent / "_metadata" / "widefield_nidq_metadata.yaml"
-    nidq_device_metadata = load_dict_from_file(nidq_metadata_path)
-
-    # Dynamically build metadata based on wiring.json (maps devices to actual channel IDs)
-    nidq_metadata = _build_nidq_metadata_from_wiring(wiring=wiring, device_metadata=nidq_device_metadata)
-    metadata = dict_deep_update(metadata, nidq_metadata)
+    nwbfile = NWBFile(**metadata["NWBFile"])
+    nwbfile.subject = ibl_subject
+    nwbfile.add_lab_meta_data(lab_meta_data=IblMetadata(revision="2025-05-06"))
 
     # ========================================================================
     # STEP 6: Write NWB file to disk
@@ -204,12 +227,19 @@ def convert_raw_session(
     print(f"Writing to NWB '{nwbfile_path}' ...")
     conversion_start = time.time()
 
-    converter.run_conversion(
+    converter.temporally_align_data_interfaces(metadata=metadata, conversion_options=conversion_options)
+    converter.add_to_nwbfile(
+        nwbfile=nwbfile,
         metadata=metadata,
-        nwbfile_path=nwbfile_path,
         conversion_options=conversion_options,
-        append_on_disk_nwbfile=append_on_disk_nwbfile,
-        overwrite=overwrite,
+    )
+
+    # Get default backend configuration
+    backend_configuration = get_default_backend_configuration(nwbfile=nwbfile, backend="hdf5")
+    configure_and_write_nwbfile(
+        nwbfile=nwbfile,
+        nwbfile_path=nwbfile_path,
+        backend_configuration=backend_configuration,
     )
 
     nwbfile = read_nwb(nwbfile_path)
