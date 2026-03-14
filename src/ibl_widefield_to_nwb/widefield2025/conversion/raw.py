@@ -23,43 +23,41 @@ from ibl_widefield_to_nwb.widefield2025.utils import (
 
 
 def convert_raw_session(
-    nwbfile_path: str | Path,
+    eid: str,
+    one: ONE,
+    nwbfiles_folder_path: str | Path,
     raw_data_dir_path: str | Path,
     cache_dir_path: str | Path,
-    nidq_data_dir_path: str | Path,
-    processed_data_dir_path: str | Path,
     functional_wavelength_nm: int,
     isosbestic_wavelength_nm: int,
-    one_api_kwargs: dict,
     force_cache: bool = False,
     stub_test: bool = False,
-    append_on_disk_nwbfile: bool = False,
 ) -> Path:
     """
     Convert a single session of widefield raw imaging data to NWB format.
 
     Parameters
     ----------
-    nwbfile_path: str or Path
-        Path to the output NWB file.
+    eid: str
+        Experiment ID (session UUID).
+    one: ONE
+        An instance of the ONE API to access data.
+    nwbfiles_folder_path: str or Path
+        The folder path where the NWB file will be saved. The final NWB file will be saved as:
+        {output_path}/nwbfiles/{full|stub}/sub-{subject_id}/sub-{subject_id}_ses-{eid}_desc-raw_behavior+ophys.nwb
+        Where {full|stub} depends on the 'stub_test' parameter, and {subject_id} is derived from the session metadata.
     raw_data_dir_path: str or Path
         Path to the directory containing the raw widefield data for the session.
     cache_dir_path: str or Path
         Path to the directory for caching intermediate data.
-    nidq_data_dir_path: str or Path
-        Path to the directory containing NIDQ data.
     functional_wavelength_nm: int
         Wavelength (in nm) for the functional (calcium) imaging data.
     isosbestic_wavelength_nm: int
         Wavelength (in nm) for the isosbestic imaging data.
-    one_api_kwargs: dict
-        Keyword arguments to initialize the interfaces that require ONE API access.
     force_cache: bool, default: False
         If True, force rebuilding of the cache even if it already exists.
     stub_test: bool, default: False
         If True, run a stub test (process a small subset of the data for testing purposes).
-    append_on_disk_nwbfile: bool, default: False
-        If True, append data to an existing on-disk NWB file instead of creating a new one.
 
     Returns
     -------
@@ -88,14 +86,7 @@ def convert_raw_session(
     validate_cache(cache_folder_path=cache_dir_path)
 
     # ========================================================================
-    # STEP 2: Decompress NIDQ .cbin files
-    # ========================================================================
-
-    decompressed_dir_path = nidq_data_dir_path / "decompressed"
-    decompress_ephys_cbins(source_folder=nidq_data_dir_path, target_folder=decompressed_dir_path)
-
-    # ========================================================================
-    # STEP 3: Define data interfaces and conversion options
+    # STEP 2: Define data interfaces and conversion options
     # ========================================================================
 
     data_interfaces = dict()
@@ -103,7 +94,8 @@ def convert_raw_session(
 
     # Add Imaging
     functional_imaging_interface = WidefieldImagingInterface(
-        folder_path=data_dir_path,
+        one=one,
+        session=eid,
         cache_folder_path=cache_dir_path,
         excitation_wavelength_nm=functional_wavelength_nm,
     )
@@ -124,7 +116,8 @@ def convert_raw_session(
     )
 
     isosbestic_imaging_interface = WidefieldImagingInterface(
-        folder_path=data_dir_path,
+        one=one,
+        session=eid,
         cache_folder_path=cache_dir_path,
         excitation_wavelength_nm=isosbestic_wavelength_nm,
     )
@@ -178,12 +171,7 @@ def convert_raw_session(
     # STEP 4: Create converter
     # ========================================================================
 
-    converter = WidefieldRawNWBConverter(
-        one=one_api_kwargs["one"],
-        eid=one_api_kwargs["eid"],
-        data_interfaces=data_interfaces,
-        processed_data_folder_path=processed_data_dir_path,
-    )
+    converter = WidefieldRawNWBConverter(one=one, session=eid, data_interfaces=data_interfaces,)
 
     # ========================================================================
     # STEP 5: Get metadata
