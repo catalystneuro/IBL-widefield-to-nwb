@@ -20,7 +20,6 @@ def session_to_nwb(
     mode: str = "raw",
     force_cache: bool = False,
     stub_test: bool = False,
-    append_on_disk_nwbfile: bool = False,
     redownload_data: bool = False,
 ):
     """
@@ -34,14 +33,6 @@ def session_to_nwb(
         The session ID.
     nwb_folder_path: str or Path
         Path to the directory to save the output NWB file.
-    raw_data_dir_path: str or Path
-        Path to the directory containing the raw widefield data for the session.
-    cache_dir_path: str or Path
-        Path to the directory for caching intermediate data.
-    nidq_data_dir_path: str or Path
-        Path to the directory containing NIDQ data.
-    processed_data_dir_path: str or Path
-        Path to the directory containing processed widefield data.
     functional_wavelength_nm: int
         Wavelength (in nm) for the functional imaging data.
     isosbestic_wavelength_nm: int
@@ -60,16 +51,6 @@ def session_to_nwb(
 
     nwb_folder_path = Path(nwb_folder_path)
     nwb_folder_path.mkdir(parents=True, exist_ok=True)
-
-    try:
-        ((session_metadata),) = one.alyx.rest(url="sessions", action="list", id=eid)
-    except Exception as e:
-        raise RuntimeError(f"Failed to access ONE for eid {eid}: {e}")
-
-    subject_id = session_metadata["subject"]
-    nwbfile_path = Path(nwb_folder_path) / f"sub-{subject_id}_ses-{eid}_desc-{mode}_ophys+behavior.nwb"
-
-    one_api_kwargs = dict(one=one, eid=eid)
 
     # ========================================================================
     # STEP 1: Download Widefield Session Data
@@ -93,33 +74,25 @@ def session_to_nwb(
 
     match mode:
         case "raw":
-            one_api_kwargs.update(
-                subject_id=subject_id,
-                nwbfiles_folder_path=nwb_folder_path,
-            )
-
             nwbfile_path = convert_raw_session(
-                nwbfile_path=nwbfile_path,
+                eid=eid,
+                one=one,
+                nwbfiles_folder_path=nwb_folder_path,
                 raw_data_dir_path=widefield_session["raw_widefield_data"],
                 cache_dir_path=widefield_session["raw_widefield_data"] / "wf_cache",
-                nidq_data_dir_path=widefield_session["raw_ephys_data"],
-                processed_data_dir_path=widefield_session["alf/widefield"],
                 functional_wavelength_nm=functional_wavelength_nm,
                 isosbestic_wavelength_nm=isosbestic_wavelength_nm,
-                one_api_kwargs=one_api_kwargs,
                 force_cache=force_cache,
                 stub_test=stub_test,
-                append_on_disk_nwbfile=append_on_disk_nwbfile,
             )
         case "processed":
             nwbfile_path = convert_processed_session(
-                nwbfile_path=nwbfile_path,
-                processed_data_dir_path=widefield_session["alf/widefield"],
+                eid=eid,
+                one=one,
+                nwbfiles_folder_path=nwb_folder_path,
                 functional_wavelength_nm=functional_wavelength_nm,
                 isosbestic_wavelength_nm=isosbestic_wavelength_nm,
-                one_api_kwargs=one_api_kwargs,
                 stub_test=stub_test,
-                append_on_disk_nwbfile=append_on_disk_nwbfile,
             )
 
     print(f"\n✓ NWB file created/updated successfully at: {nwbfile_path}")
@@ -134,7 +107,7 @@ if __name__ == "__main__":
     functional_wavelength_nm = 470  # The wavelength for functional imaging (e.g. 470 nm)
     isosbestic_wavelength_nm = 405  # The wavelength for isosbestic imaging (e.g. 405 nm)
 
-    stub_test = True  # Set to True for quick testing with limited data
+    stub_test = False  # Set to True for quick testing with limited data
 
     # ONE api instance
     from one.api import ONE
