@@ -2,10 +2,13 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Literal
 
+import numpy as np
+import pandas as pd
 from neuroconv.datainterfaces.ophys.baseimagingextractorinterface import (
     BaseImagingExtractorInterface,
 )
 from neuroconv.utils import DeepDict, dict_deep_update, load_dict_from_file
+from one.api import ONE
 from pydantic import DirectoryPath
 
 from ibl_widefield_to_nwb.widefield2025.datainterfaces._base_ibl_interface import (
@@ -48,50 +51,40 @@ class WidefieldImagingInterface(BaseImagingExtractorInterface, BaseIBLDataInterf
                     # For aligned timestamps
                     "alf/widefield/imaging.times.npy",
                     "alf/widefield/imaging.imagingLightSource.npy",
+                    "alf/widefield/imagingLightSource.properties.htsv",
                 ]
             },
         }
 
     def __init__(
         self,
-        folder_path: DirectoryPath,
+        one: ONE,
+        session: str,
         cache_folder_path: DirectoryPath,
         excitation_wavelength_nm: int | None = None,
         photon_series_type: Literal["OnePhotonSeries", "TwoPhotonSeries"] = "OnePhotonSeries",
         verbose: bool = False,
     ):
-
-        folder_path = Path(folder_path)
-        cache_folder_path = Path(cache_folder_path)
-
-        cached_movie_file_path = cache_folder_path / "frames.dat"
-        if not cached_movie_file_path.exists():
-            raise FileNotFoundError(
-                f"'frames.dat' not found in folder: {cache_folder_path}. Please build frame cache first."
-            )
-
-        htsv_file_paths = list(folder_path.glob("*.htsv"))
-        if len(htsv_file_paths) == 0:
-            raise FileNotFoundError(f"No .htsv files found in folder: {folder_path}")
-        elif len(htsv_file_paths) > 1:
-            raise ValueError(
-                f"Multiple .htsv files found in folder: {folder_path}. Please ensure only one file is present."
-            )
-        htsv_file_path = str(htsv_file_paths[0])
-
-        camlog_file_paths = list(folder_path.glob("*.camlog"))
-        if len(camlog_file_paths) == 0:
-            raise FileNotFoundError(f"No .camlog files found in folder: {folder_path}")
-        elif len(camlog_file_paths) > 1:
-            raise ValueError(
-                f"Multiple .camlog files found in folder: {folder_path}. Please ensure only one file is present."
-            )
-        camlog_file_path = str(camlog_file_paths[0])
-
+        """
+        Parameters
+        ----------
+        one : ONE
+            The ONE API instance for data access.
+        session : str
+            The session ID (eid).
+        cache_folder_path : DirectoryPath
+            Path to the frame-cache folder produced by build_frame_cache (contains frames.dat and meta.json).
+        excitation_wavelength_nm : int, optional
+            Excitation wavelength in nm (e.g. 470 for calcium, 405 for isosbestic).
+        photon_series_type : str, default "OnePhotonSeries"
+            NWB photon series type.
+        verbose : bool, default False
+            Whether to print verbose output.
+        """
         super().__init__(
-            folder_path=cache_folder_path,
-            htsv_file_path=htsv_file_path,
-            camlog_file_path=camlog_file_path,
+            one=one,
+            session=session,
+            cache_folder_path=cache_folder_path,
             excitation_wavelength_nm=excitation_wavelength_nm,
             photon_series_type=photon_series_type,
             verbose=verbose,
@@ -157,3 +150,41 @@ class WidefieldImagingInterface(BaseImagingExtractorInterface, BaseIBLDataInterf
         )
 
         return metadata_copy
+
+    def get_aligned_timestamps(self) -> np.ndarray:
+        """
+        Return aligned imaging timestamps for this interface's excitation wavelength.
+
+        Loads the aligned ``imaging.times`` and ``imaging.imagingLightSource`` arrays from
+        the ONE API and filters them to the wavelength set on this interface.
+
+        Returns
+        -------
+        np.ndarray
+            1-D array of timestamps (seconds) for the selected excitation wavelength.
+        """
+        one = self.imaging_extractor.one
+        session = self.imaging_extractor.session
+        excitation_wavelength_nm = self.imaging_extractor.excitation_wavelength_nm
+
+        collection = "alf/widefield"
+        all_times = one.load_dataset(session, "imaging.times", collection=collection)
+        light_sources = one.load_dataset(session, "imaging.imagingLightSource", collection=collection)
+
+        # Resolve channel_id for this wavelength; fall back to direct CSV read if ONE misparses the htsv
+        light_source_props = one.load_dataset(session, "imagingLightSource.properties", collection=collection)
+        if "wavelength" not in light_source_props:
+            session_path = one.eid2path(session)
+            htsv_path = session_path / collection / "imagingLightSource.properties.htsv"
+            light_source_props = pd.read_csv(htsv_path, sep=None, engine="python")
+
+        channel_ids = light_source_props.loc[
+            light_source_props["wavelength"] == excitation_wavelength_nm, "channel_id"
+        ].tolist()
+        if not channel_ids:
+            raise ValueError(f"No channel ID found for wavelength {excitation_wavelength_nm} nm.")
+        channel_id = channel_ids[0]
+
+        n_samples = min(len(all_times), len(light_sources))
+        times_per_channel = all_times[:n_samples][light_sources[:n_samples] == channel_id]
+        return times_per_channel
