@@ -410,49 +410,45 @@ class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
 
         # Compute xyz0: the physical coordinate at pixel (0,0) of the REGISTERED image.
         # BrainCoordinates model: physical = xyz0 + dxyz * pixel_index
-        # With dxyz = [+res, +res, res]:  physical = xyz0 + res * pixel_index
-        #   (positive because as column/row index increases, ML/AP coordinate increases:
-        #    left-to-right in image = increasing ML, top-to-bottom = increasing AP since top=anterior)
-        # At the anchor landmark: xyz_um_ref_landmark = xyz0 + res * warp_coords_px
-        #   → xyz0 = xyz_um_ref_landmark - res * warp_coords_px
-        warp_origin_coords_um = (
-            xyz_um_ref_landmark
-            - np.r_[
-                image_resolution * warp_coords_px[0],  # xyz0[x] = anchor_x_um - res * anchor_px_x
-                image_resolution * warp_coords_px[1],  # xyz0[y] = anchor_y_um - res * anchor_px_y
-                0.0,  # xyz0[z] = 0 (no z offset for 2-D projection)
-            ]
-        )
+        # dxyz[x] = +res  → as column index increases, ML coord increases (left→right = medial→lateral)
+        # dxyz[y] = -res  → as row index increases, AP coord DECREASES (top=anterior, bottom=posterior
+        #                    in IBL convention where anterior is positive AP)
+        # At the anchor landmark:
+        #   anchor_x_um = xyz0[x] + res  * px_col  →  xyz0[x] = anchor_x_um - res  * px_col
+        #   anchor_y_um = xyz0[y] + (-res) * px_row →  xyz0[y] = anchor_y_um + res  * px_row
+        warp_origin_coords_um = xyz_um_ref_landmark + np.r_[
+            -image_resolution * warp_coords_px[0],  # xyz0[x] = anchor_x_um - res * anchor_px_col
+            +image_resolution * warp_coords_px[1],  # xyz0[y] = anchor_y_um + res * anchor_px_row  (AP flipped)
+            0.0,
+        ]
 
         # Resolution of the CCF atlas projection in um/pixel
         reference_resolution = self.ccf_regions["resolution"].values.astype(float)[0]  # in um / pixel
 
-        # Compute xyz0 for the ATLAS PROJECTION coordinate system using the same formula.
-        # Both systems share the same physical frame: the anchor landmark maps to the same
-        # physical coordinate in both the registered image and the atlas projection.
-        reference_origin_coords_um = (
-            xyz_um_ref_landmark
-            - np.r_[reference_resolution * reference_coords_px[0], reference_resolution * reference_coords_px[1], 0.0]
-        )
+        # Same formula for the ATLAS PROJECTION coordinate system.
+        reference_origin_coords_um = xyz_um_ref_landmark + np.r_[
+            -reference_resolution * reference_coords_px[0],
+            +reference_resolution * reference_coords_px[1],
+            0.0,
+        ]
 
         # BrainCoordinates(shape, xyz0, dxyz):
         #   shape = [width, height, depth]  (note: x = columns, y = rows)
         #   xyz0  = physical coord at pixel (0, 0, 0)
-        #   dxyz  = [+res, +res, res]  →  as pixel index increases, physical coord increases
-        #           left-to-right = increasing ML (+right), top-to-bottom = increasing AP (+posterior)
+        #   dxyz  = [+res, -res, res]  →  ML increases left-to-right, AP decreases top-to-bottom
 
         # Coordinate system for the REGISTERED image (physical units = IBL bregma um)
         brain_coordinates_warp = BrainCoordinates(
             [self.registered_image.shape[1], self.registered_image.shape[0], 2],  # [width, height, 2]
             xyz0=warp_origin_coords_um,
-            dxyz=[image_resolution, image_resolution, image_resolution],
+            dxyz=[image_resolution, -image_resolution, image_resolution],
         )
 
         # Coordinate system for the ATLAS PROJECTION image (shares physical frame with warp)
         brain_coordinates_reference = BrainCoordinates(
             [self.atlas_projection.shape[1], self.atlas_projection.shape[0], 2],  # [width, height, 2]
             xyz0=reference_origin_coords_um,
-            dxyz=[reference_resolution, reference_resolution, reference_resolution],
+            dxyz=[reference_resolution, -reference_resolution, reference_resolution],
         )
 
         # Build a flat list of all pixel indices for the registered image.
