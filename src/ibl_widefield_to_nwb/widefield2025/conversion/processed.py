@@ -15,43 +15,35 @@ from ibl_widefield_to_nwb.widefield2025.datainterfaces import (
 
 
 def convert_processed_session(
-    nwbfile_path: str | Path,
-    processed_data_dir_path: str | Path,
+    eid: str,
+    one: ONE,
+    nwbfiles_folder_path: str | Path,
     functional_wavelength_nm: int,
     isosbestic_wavelength_nm: int,
-    one_api_kwargs: dict,
     stub_test: bool = False,
-    append_on_disk_nwbfile: bool = False,
 ):
     """
     Convert a single session of processed widefield imaging data to NWB format.
 
-    Expected file structure:
-    data_dir_path/
-      ├── imaging.imagingLightSource.npy
-      ├── imaging.times.npy
-      ├── imagingLightSource.properties.htsv
-      ├── widefieldChannels.frameAverage.npy
-      ├── widefieldSVT.haemoCorrected.npy
-      ├── widefieldSVT.uncorrected.npy
-      └── widefieldU.images.npy
+    Data is fetched directly from the ONE API (collection ``alf/widefield``); no local
+    directory path is required.
 
     Parameters
     ----------
-    nwbfile_path: str | Path
-        Path to the output NWB file.
-    processed_data_dir_path: str | Path
-        Path to the directory containing the processed widefield imaging data.
+    eid: str
+        Experiment ID (session UUID).
+    one: ONE
+        An instance of the ONE API to access data.
+    nwbfiles_folder_path: str or Path
+        The folder path where the NWB file will be saved. The final NWB file will be saved as:
+        {output_path}/nwbfiles/{full|stub}/sub-{subject_id}/sub-{subject_id}_ses-{eid}_desc-processed_behavior+ophys.nwb
+        Where {full|stub} depends on the 'stub_test' parameter, and {subject_id} is derived from the session metadata.
     functional_wavelength_nm: int
         Wavelength (in nm) for the functional imaging data.
     isosbestic_wavelength_nm: int
         Wavelength (in nm) for the isosbestic imaging data.
-    one_api_kwargs: dict
-        Keyword arguments to initialize the interfaces that require ONE API access.
     stub_test: bool, default: False
         Whether to run a stub test (process a smaller subset of data for testing purposes).
-    append_on_disk_nwbfile: bool, default: False
-        If True, append data to an existing on-disk NWB file instead of creating a new one.
     """
 
     processed_data_dir_path = Path(processed_data_dir_path)
@@ -67,11 +59,13 @@ def convert_processed_session(
 
     # Add SVD interfaces
     data_interfaces["SVDCalcium"] = WidefieldSVDInterface(
-        folder_path=processed_data_dir_path,
+        one=one,
+        session=eid,
         excitation_wavelength_nm=functional_wavelength_nm,
     )
     data_interfaces["SVDIsosbestic"] = WidefieldSVDInterface(
-        folder_path=processed_data_dir_path,
+        one=one,
+        session=eid,
         excitation_wavelength_nm=isosbestic_wavelength_nm,
     )
 
@@ -99,10 +93,10 @@ def convert_processed_session(
         conversion_options.update(dict(Landmarks=dict()))
 
     # Add Behavior
-    behavior_interfaces = get_processed_behavior_interfaces(**one_api_kwargs)
+    behavior_interfaces = get_processed_behavior_interfaces(one=one, eid=eid)
     data_interfaces.update(behavior_interfaces)
 
-    converter = WidefieldProcessedNWBConverter(**one_api_kwargs, data_interfaces=data_interfaces)
+    converter = WidefieldProcessedNWBConverter(one=one, session=eid, data_interfaces=data_interfaces)
 
     # Add datetime to conversion
     metadata = converter.get_metadata()
