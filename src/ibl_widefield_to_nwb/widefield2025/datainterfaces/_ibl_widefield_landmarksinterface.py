@@ -410,15 +410,16 @@ class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
 
         # Compute xyz0: the physical coordinate at pixel (0,0) of the REGISTERED image.
         # BrainCoordinates model: physical = xyz0 + dxyz * pixel_index
-        # dxyz[x] = +res  → as column index increases, ML coord increases (left→right = medial→lateral)
-        # dxyz[y] = -res  → as row index increases, AP coord DECREASES (top=anterior, bottom=posterior
-        #                    in IBL convention where anterior is positive AP)
+        # dxyz[x] = +res  → as column index increases, ML coord increases (left→right)
+        # dxyz[y] = +res  → as row index increases, AP coord increases (top→bottom = anterior→posterior)
+        #                    NOTE: in this dataset's IBL convention, POSTERIOR = POSITIVE y
+        #                    (OB anterior to bregma → y = -3450 µm; RSP posterior → y = +3200 µm)
         # At the anchor landmark:
-        #   anchor_x_um = xyz0[x] + res  * px_col  →  xyz0[x] = anchor_x_um - res  * px_col
-        #   anchor_y_um = xyz0[y] + (-res) * px_row →  xyz0[y] = anchor_y_um + res  * px_row
-        warp_origin_coords_um = xyz_um_ref_landmark + np.r_[
-            -image_resolution * warp_coords_px[0],  # xyz0[x] = anchor_x_um - res * anchor_px_col
-            +image_resolution * warp_coords_px[1],  # xyz0[y] = anchor_y_um + res * anchor_px_row  (AP flipped)
+        #   anchor_x_um = xyz0[x] + res * px_col  →  xyz0[x] = anchor_x_um - res * px_col
+        #   anchor_y_um = xyz0[y] + res * px_row  →  xyz0[y] = anchor_y_um - res * px_row
+        warp_origin_coords_um = xyz_um_ref_landmark - np.r_[
+            image_resolution * warp_coords_px[0],   # xyz0[x] = anchor_x_um - res * anchor_px_col
+            image_resolution * warp_coords_px[1],   # xyz0[y] = anchor_y_um - res * anchor_px_row
             0.0,
         ]
 
@@ -426,29 +427,29 @@ class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
         reference_resolution = self.ccf_regions["resolution"].values.astype(float)[0]  # in um / pixel
 
         # Same formula for the ATLAS PROJECTION coordinate system.
-        reference_origin_coords_um = xyz_um_ref_landmark + np.r_[
-            -reference_resolution * reference_coords_px[0],
-            +reference_resolution * reference_coords_px[1],
+        reference_origin_coords_um = xyz_um_ref_landmark - np.r_[
+            reference_resolution * reference_coords_px[0],
+            reference_resolution * reference_coords_px[1],
             0.0,
         ]
 
         # BrainCoordinates(shape, xyz0, dxyz):
         #   shape = [width, height, depth]  (note: x = columns, y = rows)
         #   xyz0  = physical coord at pixel (0, 0, 0)
-        #   dxyz  = [+res, -res, res]  →  ML increases left-to-right, AP decreases top-to-bottom
+        #   dxyz  = [+res, +res, res]  →  both ML and AP increase with pixel index
 
         # Coordinate system for the REGISTERED image (physical units = IBL bregma um)
         brain_coordinates_warp = BrainCoordinates(
             [self.registered_image.shape[1], self.registered_image.shape[0], 2],  # [width, height, 2]
             xyz0=warp_origin_coords_um,
-            dxyz=[image_resolution, -image_resolution, image_resolution],
+            dxyz=[image_resolution, image_resolution, image_resolution],
         )
 
         # Coordinate system for the ATLAS PROJECTION image (shares physical frame with warp)
         brain_coordinates_reference = BrainCoordinates(
             [self.atlas_projection.shape[1], self.atlas_projection.shape[0], 2],  # [width, height, 2]
             xyz0=reference_origin_coords_um,
-            dxyz=[reference_resolution, -reference_resolution, reference_resolution],
+            dxyz=[reference_resolution, reference_resolution, reference_resolution],
         )
 
         # Build a flat list of all pixel indices for the registered image.
