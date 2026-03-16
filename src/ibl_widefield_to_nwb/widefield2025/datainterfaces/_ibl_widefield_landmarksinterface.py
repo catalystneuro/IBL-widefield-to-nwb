@@ -417,21 +417,27 @@ class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
         # At the anchor landmark:
         #   anchor_x_um = xyz0[x] + res * px_col  →  xyz0[x] = anchor_x_um - res * px_col
         #   anchor_y_um = xyz0[y] + res * px_row  →  xyz0[y] = anchor_y_um - res * px_row
-        warp_origin_coords_um = xyz_um_ref_landmark - np.r_[
-            image_resolution * warp_coords_px[0],   # xyz0[x] = anchor_x_um - res * anchor_px_col
-            image_resolution * warp_coords_px[1],   # xyz0[y] = anchor_y_um - res * anchor_px_row
-            0.0,
-        ]
+        warp_origin_coords_um = (
+            xyz_um_ref_landmark
+            - np.r_[
+                image_resolution * warp_coords_px[0],  # xyz0[x] = anchor_x_um - res * anchor_px_col
+                image_resolution * warp_coords_px[1],  # xyz0[y] = anchor_y_um - res * anchor_px_row
+                0.0,
+            ]
+        )
 
         # Resolution of the CCF atlas projection in um/pixel
         reference_resolution = self.ccf_regions["resolution"].values.astype(float)[0]  # in um / pixel
 
         # Same formula for the ATLAS PROJECTION coordinate system.
-        reference_origin_coords_um = xyz_um_ref_landmark - np.r_[
-            reference_resolution * reference_coords_px[0],
-            reference_resolution * reference_coords_px[1],
-            0.0,
-        ]
+        reference_origin_coords_um = (
+            xyz_um_ref_landmark
+            - np.r_[
+                reference_resolution * reference_coords_px[0],
+                reference_resolution * reference_coords_px[1],
+                0.0,
+            ]
+        )
 
         # BrainCoordinates(shape, xyz0, dxyz):
         #   shape = [width, height, depth]  (note: x = columns, y = rows)
@@ -480,7 +486,11 @@ class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
         # at the landmark pixel locations — if warp_origin_coords_um is correct.
         atlas = AllenAtlas(res_um=10)
         xyz_m = xyz_um * 1e-6  # um → metres (required by atlas.xyz2ccf)
-        ccf_um = atlas.xyz2ccf(xyz=xyz_m, ccf_order="apdvml", mode="clip").astype(np.float64)  # shape (H*W, 3)
+        # iblatlas.xyz2ccf expects RAS convention (y = +anterior).
+        # In this dataset y increases posteriorly, so negate y before converting.
+        xyz_m_for_ccf = xyz_m.copy()
+        xyz_m_for_ccf[:, 1] = -xyz_m_for_ccf[:, 1]
+        ccf_um = atlas.xyz2ccf(xyz=xyz_m_for_ccf, ccf_order="apdvml", mode="clip").astype(np.float64)  # shape (H*W, 3)
 
         # Look up the atlas region label at each atlas-projection pixel.
         # ref_idx[:,0] = column (x), ref_idx[:,1] = row (y) in atlas_projection.
@@ -660,7 +670,11 @@ class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
         # Both use the same atlas.xyz2ccf call, so they should agree at landmark pixel positions
         # — unless BrainCoordinates introduces an offset (see ⚠ in _build_anatomical_coordinates_image).
         atlas = AllenAtlas(res_um=10)
-        ccf_um = atlas.xyz2ccf(xyz=xyz_m, ccf_order="apdvml").astype(np.float64)  # shape (N, 3)
+        # iblatlas.xyz2ccf expects RAS convention (y = +anterior).
+        # In this dataset y increases posteriorly, so negate y before converting.
+        xyz_m_for_ccf = xyz_m.copy()
+        xyz_m_for_ccf[:, 1] = -xyz_m_for_ccf[:, 1]
+        ccf_um = atlas.xyz2ccf(xyz=xyz_m_for_ccf, ccf_order="apdvml").astype(np.float64)  # shape (N, 3)
 
         for landmark_index in range(len(landmarks)):
             brain_region = landmarks["landmark_labels"][landmark_index]
