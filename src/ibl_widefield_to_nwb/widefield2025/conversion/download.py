@@ -62,6 +62,11 @@ def download_widefield_session(
                 daq_files = IblWidefieldDAQInterface.download_data(one=one, eid=eid, download_only=True)
                 widefield_session_files.extend(daq_files)
 
+            # Landmarks data (optional — only downloaded if available)
+            if IblWidefieldLandmarksInterface.check_availability(one=one, eid=eid)["available"]:
+                landmarks_files = IblWidefieldLandmarksInterface.download_data(one=one, eid=eid, download_only=True)
+                widefield_session_files.extend(landmarks_files)
+
         case "processed":
             # Processed widefield imaging data
             processed_widefield_files = WidefieldSVDInterface.download_data(one=one, eid=eid, download_only=True)

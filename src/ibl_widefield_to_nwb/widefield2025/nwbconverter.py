@@ -1,6 +1,6 @@
 """Primary NWBConverter class for this dataset."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from neuroconv import BaseDataInterface, ConverterPipe
 from one.api import ONE
@@ -37,6 +37,14 @@ class WidefieldProcessedNWBConverter(ConverterPipe):
         metadata["NWBFile"]["session_start_time"] = session_start_time
         metadata["NWBFile"]["session_id"] = self.eid
         metadata["Subject"]["subject_id"] = session_metadata["subject"]
+
+        # Ensure date_of_birth is a datetime object (Alyx returns it as an ISO string)
+        dob = metadata.get("Subject", {}).get("date_of_birth")
+        if isinstance(dob, str):
+            parsed = datetime.fromisoformat(dob)
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=timezone.utc)
+            metadata["Subject"]["date_of_birth"] = parsed
 
         return metadata
 
@@ -76,6 +84,14 @@ class WidefieldRawNWBConverter(ConverterPipe):
         metadata["NWBFile"]["session_start_time"] = session_start_time
         metadata["NWBFile"]["session_id"] = self.eid
         metadata["Subject"]["subject_id"] = session_metadata["subject"]
+
+        # Ensure date_of_birth is a datetime object (Alyx returns it as an ISO string)
+        dob = metadata.get("Subject", {}).get("date_of_birth")
+        if isinstance(dob, str):
+            parsed = datetime.fromisoformat(dob)
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=timezone.utc)
+            metadata["Subject"]["date_of_birth"] = parsed
 
         return metadata
 

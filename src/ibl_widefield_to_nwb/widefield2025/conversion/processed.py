@@ -94,9 +94,8 @@ def convert_processed_session(
     )
 
     # Add landmarks
-    landmarks_file_path = processed_data_dir_path / "widefieldLandmarks.dorsalCortex.json"
-    if landmarks_file_path.exists():
-        data_interfaces["Landmarks"] = IblWidefieldLandmarksInterface(file_path=landmarks_file_path)
+    if IblWidefieldLandmarksInterface.check_availability(one=one, eid=eid)["available"]:
+        data_interfaces["Landmarks"] = IblWidefieldLandmarksInterface(one=one, session=eid)
         conversion_options.update(dict(Landmarks=dict()))
 
     # Add Behavior
