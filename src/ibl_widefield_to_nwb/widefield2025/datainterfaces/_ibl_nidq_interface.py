@@ -29,6 +29,39 @@ DIGITAL_DEVICE_LABELS = {
 
 
 class IblNIDQInterface(SpikeGLXNIDQInterface, BaseIBLDataInterface):
+    """IBL-specific NIDQ interface for widefield sessions with a Neuropixels NIDQ board.
+
+    This interface wraps NeuroConv's ``SpikeGLXNIDQInterface`` and handles IBL-specific
+    setup steps before delegating to the parent class:
+
+    1. **Decompression**: the ``.cbin`` file is decompressed to a ``decompressed/``
+       subfolder before SpikeGLX readers can open it.
+    2. **Re-encoding**: some SpikeGLX ``.meta`` files contain Latin-1 bytes (e.g. the
+       degree symbol) that cause UnicodeDecodeError in Neo. ``_reencode_meta_files_to_utf8``
+       fixes them in-place.
+    3. **Wiring-driven channel config**: ``wiring.json`` maps hardware ports (``P0.x``
+       digital, ``AIx`` analog) to device names. The two ``get_*_channel_groups_from_wiring``
+       static methods build the ``analog_channel_groups`` / ``digital_channel_groups`` dicts
+       that the parent class needs. Adding a new device requires an entry in
+       ``DIGITAL_DEVICE_LABELS`` above and a corresponding entry in
+       ``_metadata/widefield_nidq_metadata.yaml``.
+
+    This interface is the **preferred** sync source. ``IblWidefieldDAQInterface`` is used
+    as a fallback when ``raw_ephys_data/`` is absent and ``raw_sync_data/`` is available.
+
+    Example wiring.json structure::
+
+        {
+          "SYNC_WIRING_DIGITAL": {
+            "P0.0": "left_camera",
+            "P0.5": "rotary_encoder_0",
+            "P0.7": "audio"
+          },
+          "SYNC_WIRING_ANALOG": {
+            "AI0": "bpod"
+          }
+        }
+    """
 
     COLLECTION = "raw_ephys_data"
 

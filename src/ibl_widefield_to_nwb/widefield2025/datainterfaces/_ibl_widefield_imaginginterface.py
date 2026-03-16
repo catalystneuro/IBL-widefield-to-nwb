@@ -21,7 +21,35 @@ from ibl_widefield_to_nwb.widefield2025.datainterfaces._ibl_widefield_imagingext
 
 
 class WidefieldImagingInterface(BaseImagingExtractorInterface, BaseIBLDataInterface):
-    """Data Interface for WidefieldImagingExtractor."""
+    """Data interface for IBL widefield raw imaging data (dual-wavelength one-photon series).
+
+    Raw widefield data interleaves two excitation wavelengths in every other frame
+    (e.g. 470 nm calcium and 405 nm isosbestic). This interface wraps
+    ``WidefieldImagingExtractor`` — one instance per wavelength — and handles:
+
+    - **Frame selection**: the extractor reads ``widefieldEvents.raw.camlog`` to identify
+      which interleaved frames in the memmap belong to this wavelength's LED channel.
+    - **Timestamp alignment**: ``get_aligned_timestamps()`` loads ``imaging.times.npy`` and
+      ``imaging.imagingLightSource.npy`` from ``alf/widefield`` and returns only the
+      timestamps matching this interface's excitation wavelength.
+    - **Metadata**: reads ``_metadata/widefield_ophys_metadata.yaml`` keyed by
+      ``excitation_lambda`` to populate ``ImagingPlane`` and ``OnePhotonSeries`` fields.
+
+    **Frame cache prerequisite:** the raw ``.mov`` (JPEG2000-compressed) must be decoded
+    into a binary memmap cache by ``build_frame_cache()`` before this interface is
+    instantiated.  In the conversion pipeline this is done inside
+    ``convert_raw_session()``; the cache path is auto-derived as
+    ``one.eid2path(eid) / "raw_widefield_data" / "wf_cache"``.
+
+    Two instances are created per session — one per wavelength::
+
+        WidefieldImagingInterface(excitation_wavelength_nm=470)  # → OnePhotonSeriesCalcium
+        WidefieldImagingInterface(excitation_wavelength_nm=405)  # → OnePhotonSeriesIsosbestic
+
+    Before writing, ``WidefieldRawNWBConverter.temporally_align_data_interfaces()`` calls
+    ``get_aligned_timestamps()`` on each instance and injects the result into the
+    underlying extractor so that per-frame timestamps are available at write time.
+    """
 
     display_name = "IBL Widefield Imaging"
     associated_suffixes = (".mov", ".htsv", ".camlog")
@@ -171,7 +199,10 @@ class WidefieldImagingInterface(BaseImagingExtractorInterface, BaseIBLDataInterf
         all_times = one.load_dataset(session, "imaging.times", collection=collection)
         light_sources = one.load_dataset(session, "imaging.imagingLightSource", collection=collection)
 
-        # Resolve channel_id for this wavelength; fall back to direct CSV read if ONE misparses the htsv
+        # ONE API sometimes returns imagingLightSource.properties without a "wavelength" column
+        # when the file uses commas as a separator (observed in some labs, e.g. zadorlab)
+        # instead of the standard tab. Fall back to a direct pandas read with sep=None so
+        # Python's CSV sniffer can detect the actual delimiter.
         light_source_props = one.load_dataset(session, "imagingLightSource.properties", collection=collection)
         if "wavelength" not in light_source_props:
             session_path = one.eid2path(session)

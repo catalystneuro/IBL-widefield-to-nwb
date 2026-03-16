@@ -6,6 +6,26 @@ from one.api import ONE
 
 
 class BaseIBLDataInterface(BaseDataInterface):
+    """Base class for all IBL data interfaces in this project.
+
+    Every concrete interface must implement ``get_data_requirements()`` returning a dict
+    with an ``exact_files_options`` key that maps option names to lists of required file
+    paths.  A single-format interface uses ``{"standard": [...files...]}``.  Interfaces
+    that can be satisfied by more than one set of files (e.g. both NIDQ and DAQ formats)
+    list multiple named options — ``check_availability`` succeeds when **any** option's
+    files are all present::
+
+        {
+            "exact_files_options": {
+                "nidq": ["raw_ephys_data/file.nidq.cbin", ...],
+                "daq":  ["raw_sync_data/file.cbin", ...],
+            }
+        }
+
+    Class methods ``check_availability()`` and ``download_data()`` are shared by all
+    subclasses and never need to be overridden.
+    """
+
     @classmethod
     @abstractmethod
     def get_data_requirements(cls, **kwargs) -> dict:
@@ -54,19 +74,9 @@ class BaseIBLDataInterface(BaseDataInterface):
         >>> if not result["available"]:
         >>>     print(f"Missing: {result['missing_required']}")
         """
-        # # STEP 1: Check quality (QC filtering)
-        # quality_result = cls.check_quality(one=one, eid=eid, **kwargs)
-        #
-        # if quality_result is not None:
-        #     # If quality check explicitly rejects, return immediately
-        #     if quality_result.get("available") is False:
-        #         return quality_result
-        #     # Otherwise, save extra fields to merge later
-        #     extra_fields = quality_result
-        # else:
-        #     extra_fields = {}
+        # (QC filtering step reserved for future use — not yet implemented)
 
-        # STEP 2: Check file existence
+        # Check file existence
         requirements = cls.get_data_requirements(**kwargs)
 
         # Query without revision filtering to get latest version of ALL files
@@ -118,7 +128,6 @@ class BaseIBLDataInterface(BaseDataInterface):
             first_option_name = next(iter(exact_files_options.keys()))
             missing_required.extend(exact_files_options[first_option_name])
 
-        # STEP 3: Build result and merge extra fields from quality check
         result = {
             "available": len(missing_required) == 0,
             "missing_required": missing_required,
@@ -126,8 +135,6 @@ class BaseIBLDataInterface(BaseDataInterface):
             "alternative_used": alternative_used,
             "requirements": requirements,
         }
-        # result.update(extra_fields)
-
         return result
 
     @classmethod
@@ -153,10 +160,10 @@ class BaseIBLDataInterface(BaseDataInterface):
         """
         requirements = cls.get_data_requirements()
 
-        print(f"{cls.__name__} is downloading Widefield data for eid='{eid}' ...")  # (revision {revision})")
+        print(f"{cls.__name__} is downloading Widefield data for eid='{eid}' ...")
 
         start_time = time.time()
-        # NO try-except - let it fail if file missing!
+        # No try-except — let it fail if a required file is missing.
         downloaded_file_paths = []
         for dataset in requirements["exact_files_options"]["standard"]:
             downloaded_file_path = one.load_dataset(

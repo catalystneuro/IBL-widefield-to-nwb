@@ -9,7 +9,10 @@ from one.api import ONE
 from pydantic import DirectoryPath
 from roiextractors import ImagingExtractor
 
-# TODO: remove once neuroconv writes height x width by default
+# neuroconv's ImagingExtractorInterface currently expects frames in (width, height) order
+# but NWB convention is (height, width). TRANSPOSE_OUTPUT = True flips axes 1 and 2 when
+# get_series() is called so frames arrive at the writer in (time, height, width) order.
+# TODO: remove once neuroconv writes height × width by default (tracked upstream)
 TRANSPOSE_OUTPUT = True
 
 
@@ -111,9 +114,12 @@ class WidefieldImagingExtractor(ImagingExtractor):
     def _get_camera_log_metadata(self) -> pd.DataFrame:
         """
         Parse camera log file and return a DataFrame with typed columns:
-          - channel_id (int)
-          - frame_id (int)
-          - timestamp (float)
+          - channel_id (int)  — LED channel; maps to excitation wavelength via wiring.htsv
+          - frame_id (int)    — 1-indexed position in the interleaved .mov / memmap
+          - timestamp (float) — hardware clock timestamp (not aligned to NIDQ master clock)
+
+        Camera log format: each frame line starts with ``#LED:`` followed by
+        comma-separated fields: ``#LED:<channel_id>,<frame_id>,<timestamp>``
         """
         camlog_path = self._raw_data_path("widefieldEvents.raw.camlog")
         camera_log_data = []
