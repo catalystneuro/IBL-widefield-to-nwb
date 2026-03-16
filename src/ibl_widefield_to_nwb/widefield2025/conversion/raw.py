@@ -18,6 +18,7 @@ from ibl_widefield_to_nwb.widefield2025.conversion import (
 )
 from ibl_widefield_to_nwb.widefield2025.datainterfaces import (
     IblNIDQInterface,
+    IblWidefieldDAQInterface,
     IblWidefieldLandmarksInterface,
     WidefieldImagingInterface,
 )
@@ -147,6 +148,10 @@ def convert_raw_session(
     if IblNIDQInterface.check_availability(one=one, eid=eid)["available"]:
         data_interfaces["NIDQ"] = IblNIDQInterface(one=one, session=eid)
         conversion_options.update({"NIDQ": dict(stub_test=stub_test)})
+
+    elif IblWidefieldDAQInterface.check_availability(one=one, eid=eid)["available"]:
+        data_interfaces["DAQ"] = IblWidefieldDAQInterface(one=one, session=eid)
+        conversion_options.update({"DAQ": dict(stub_test=stub_test)})
     else:
         print(f"No NIDQ sync data available for session '{eid}', skipping.")
 
