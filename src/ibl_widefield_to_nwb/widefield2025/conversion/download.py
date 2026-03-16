@@ -3,6 +3,7 @@ from pathlib import Path
 
 from ibl_widefield_to_nwb.widefield2025.datainterfaces import (
     IblNIDQInterface,
+    IblWidefieldDAQInterface,
     IblWidefieldLandmarksInterface,
     WidefieldImagingInterface,
     WidefieldSVDInterface,
@@ -52,9 +53,14 @@ def download_widefield_session(
             raw_widefield_files = WidefieldImagingInterface.download_data(one=one, eid=eid, download_only=True)
             widefield_session_files.extend(raw_widefield_files)
 
-            # NIDQ data
-            nidq_files = IblNIDQInterface.download_data(one=one, eid=eid, download_only=True)
-            widefield_session_files.extend(nidq_files)
+            # SpikeGLX NIDQ data
+            if IblNIDQInterface.check_availability(one=one, eid=eid)["available"]:
+                nidq_files = IblNIDQInterface.download_data(one=one, eid=eid, download_only=True)
+                widefield_session_files.extend(nidq_files)
+            # DAQ data
+            elif IblWidefieldDAQInterface.check_availability(one=one, eid=eid)["available"]:
+                daq_files = IblWidefieldDAQInterface.download_data(one=one, eid=eid, download_only=True)
+                widefield_session_files.extend(daq_files)
 
         case "processed":
             # Processed widefield imaging data
