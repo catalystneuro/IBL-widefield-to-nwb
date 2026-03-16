@@ -1,5 +1,6 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
+from ibl_to_nwb.datainterfaces._base_ibl_interface import BaseIBLDataInterface
 from iblatlas.atlas import AllenAtlas, BrainCoordinates
 from ndx_anatomical_localization import (
     AffineTransformation,
@@ -19,10 +20,6 @@ from pynwb.base import Images
 from pynwb.image import GrayscaleImage
 from skimage.transform import warp
 from wfield import allen_load_reference, im_apply_transform, load_allen_landmarks
-
-from ibl_widefield_to_nwb.widefield2025.datainterfaces._base_ibl_interface import (
-    BaseIBLDataInterface,
-)
 
 
 class IblWidefieldLandmarksInterface(BaseIBLDataInterface):

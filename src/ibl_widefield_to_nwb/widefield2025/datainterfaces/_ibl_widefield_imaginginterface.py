@@ -2,15 +2,16 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Literal
 
+import numpy as np
+import pandas as pd
+from ibl_to_nwb.datainterfaces._base_ibl_interface import BaseIBLDataInterface
 from neuroconv.datainterfaces.ophys.baseimagingextractorinterface import (
     BaseImagingExtractorInterface,
 )
 from neuroconv.utils import DeepDict, dict_deep_update, load_dict_from_file
+from one.api import ONE
 from pydantic import DirectoryPath
 
-from ibl_widefield_to_nwb.widefield2025.datainterfaces._base_ibl_interface import (
-    BaseIBLDataInterface,
-)
 from ibl_widefield_to_nwb.widefield2025.datainterfaces._ibl_widefield_imagingextractor import (
     TRANSPOSE_OUTPUT,
     WidefieldImagingExtractor,
@@ -18,7 +19,35 @@ from ibl_widefield_to_nwb.widefield2025.datainterfaces._ibl_widefield_imagingext
 
 
 class WidefieldImagingInterface(BaseImagingExtractorInterface, BaseIBLDataInterface):
-    """Data Interface for WidefieldImagingExtractor."""
+    """Data interface for IBL widefield raw imaging data (dual-wavelength one-photon series).
+
+    Raw widefield data interleaves two excitation wavelengths in every other frame
+    (e.g. 470 nm calcium and 405 nm isosbestic). This interface wraps
+    ``WidefieldImagingExtractor`` — one instance per wavelength — and handles:
+
+    - **Frame selection**: the extractor reads ``widefieldEvents.raw.camlog`` to identify
+      which interleaved frames in the memmap belong to this wavelength's LED channel.
+    - **Timestamp alignment**: ``get_aligned_timestamps()`` loads ``imaging.times.npy`` and
+      ``imaging.imagingLightSource.npy`` from ``alf/widefield`` and returns only the
+      timestamps matching this interface's excitation wavelength.
+    - **Metadata**: reads ``_metadata/widefield_ophys_metadata.yaml`` keyed by
+      ``excitation_lambda`` to populate ``ImagingPlane`` and ``OnePhotonSeries`` fields.
+
+    **Frame cache prerequisite:** the raw ``.mov`` (JPEG2000-compressed) must be decoded
+    into a binary memmap cache by ``build_frame_cache()`` before this interface is
+    instantiated.  In the conversion pipeline this is done inside
+    ``convert_raw_session()``; the cache path is auto-derived as
+    ``one.eid2path(eid) / "raw_widefield_data" / "wf_cache"``.
+
+    Two instances are created per session — one per wavelength::
+
+        WidefieldImagingInterface(excitation_wavelength_nm=470)  # → OnePhotonSeriesCalcium
+        WidefieldImagingInterface(excitation_wavelength_nm=405)  # → OnePhotonSeriesIsosbestic
+
+    Before writing, ``WidefieldRawNWBConverter.temporally_align_data_interfaces()`` calls
+    ``get_aligned_timestamps()`` on each instance and injects the result into the
+    underlying extractor so that per-frame timestamps are available at write time.
+    """
 
     display_name = "IBL Widefield Imaging"
     associated_suffixes = (".mov", ".htsv", ".camlog")
@@ -48,50 +77,40 @@ class WidefieldImagingInterface(BaseImagingExtractorInterface, BaseIBLDataInterf
                     # For aligned timestamps
                     "alf/widefield/imaging.times.npy",
                     "alf/widefield/imaging.imagingLightSource.npy",
+                    "alf/widefield/imagingLightSource.properties.htsv",
                 ]
             },
         }
 
     def __init__(
         self,
-        folder_path: DirectoryPath,
+        one: ONE,
+        session: str,
         cache_folder_path: DirectoryPath,
         excitation_wavelength_nm: int | None = None,
         photon_series_type: Literal["OnePhotonSeries", "TwoPhotonSeries"] = "OnePhotonSeries",
         verbose: bool = False,
     ):
-
-        folder_path = Path(folder_path)
-        cache_folder_path = Path(cache_folder_path)
-
-        cached_movie_file_path = cache_folder_path / "frames.dat"
-        if not cached_movie_file_path.exists():
-            raise FileNotFoundError(
-                f"'frames.dat' not found in folder: {cache_folder_path}. Please build frame cache first."
-            )
-
-        htsv_file_paths = list(folder_path.glob("*.htsv"))
-        if len(htsv_file_paths) == 0:
-            raise FileNotFoundError(f"No .htsv files found in folder: {folder_path}")
-        elif len(htsv_file_paths) > 1:
-            raise ValueError(
-                f"Multiple .htsv files found in folder: {folder_path}. Please ensure only one file is present."
-            )
-        htsv_file_path = str(htsv_file_paths[0])
-
-        camlog_file_paths = list(folder_path.glob("*.camlog"))
-        if len(camlog_file_paths) == 0:
-            raise FileNotFoundError(f"No .camlog files found in folder: {folder_path}")
-        elif len(camlog_file_paths) > 1:
-            raise ValueError(
-                f"Multiple .camlog files found in folder: {folder_path}. Please ensure only one file is present."
-            )
-        camlog_file_path = str(camlog_file_paths[0])
-
+        """
+        Parameters
+        ----------
+        one : ONE
+            The ONE API instance for data access.
+        session : str
+            The session ID (eid).
+        cache_folder_path : DirectoryPath
+            Path to the frame-cache folder produced by build_frame_cache (contains frames.dat and meta.json).
+        excitation_wavelength_nm : int, optional
+            Excitation wavelength in nm (e.g. 470 for calcium, 405 for isosbestic).
+        photon_series_type : str, default "OnePhotonSeries"
+            NWB photon series type.
+        verbose : bool, default False
+            Whether to print verbose output.
+        """
         super().__init__(
-            folder_path=cache_folder_path,
-            htsv_file_path=htsv_file_path,
-            camlog_file_path=camlog_file_path,
+            one=one,
+            session=session,
+            cache_folder_path=cache_folder_path,
             excitation_wavelength_nm=excitation_wavelength_nm,
             photon_series_type=photon_series_type,
             verbose=verbose,
@@ -157,3 +176,44 @@ class WidefieldImagingInterface(BaseImagingExtractorInterface, BaseIBLDataInterf
         )
 
         return metadata_copy
+
+    def get_aligned_timestamps(self) -> np.ndarray:
+        """
+        Return aligned imaging timestamps for this interface's excitation wavelength.
+
+        Loads the aligned ``imaging.times`` and ``imaging.imagingLightSource`` arrays from
+        the ONE API and filters them to the wavelength set on this interface.
+
+        Returns
+        -------
+        np.ndarray
+            1-D array of timestamps (seconds) for the selected excitation wavelength.
+        """
+        one = self.imaging_extractor.one
+        session = self.imaging_extractor.session
+        excitation_wavelength_nm = self.imaging_extractor.excitation_wavelength_nm
+
+        collection = "alf/widefield"
+        all_times = one.load_dataset(session, "imaging.times", collection=collection)
+        light_sources = one.load_dataset(session, "imaging.imagingLightSource", collection=collection)
+
+        # ONE API sometimes returns imagingLightSource.properties without a "wavelength" column
+        # when the file uses commas as a separator (observed in some labs, e.g. zadorlab)
+        # instead of the standard tab. Fall back to a direct pandas read with sep=None so
+        # Python's CSV sniffer can detect the actual delimiter.
+        light_source_props = one.load_dataset(session, "imagingLightSource.properties", collection=collection)
+        if "wavelength" not in light_source_props:
+            session_path = one.eid2path(session)
+            htsv_path = session_path / collection / "imagingLightSource.properties.htsv"
+            light_source_props = pd.read_csv(htsv_path, sep=None, engine="python")
+
+        channel_ids = light_source_props.loc[
+            light_source_props["wavelength"] == excitation_wavelength_nm, "channel_id"
+        ].tolist()
+        if not channel_ids:
+            raise ValueError(f"No channel ID found for wavelength {excitation_wavelength_nm} nm.")
+        channel_id = channel_ids[0]
+
+        n_samples = min(len(all_times), len(light_sources))
+        times_per_channel = all_times[:n_samples][light_sources[:n_samples] == channel_id]
+        return times_per_channel

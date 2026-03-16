@@ -1,9 +1,8 @@
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
-from pydantic import DirectoryPath
+from one.api import ONE
 from roiextractors import SegmentationExtractor
 from roiextractors.segmentationextractor import _ROIMasks, _RoiResponse
 
@@ -15,54 +14,36 @@ class WidefieldSVDExtractor(SegmentationExtractor):
     """A segmentation extractor for IBL Widefield processed data."""
 
     extractor_name = "WidefieldSVDExtractor"
+    COLLECTION = "alf/widefield"
 
-    def __init__(self, folder_path: DirectoryPath, excitation_wavelength_nm: int):
+    def __init__(self, one: ONE, session: str, excitation_wavelength_nm: int):
         """Initialize a WidefieldSVDExtractor instance.
 
-        Main class for extracting segmentation data from .npy format.
-
-        Expected file structure:
-        folder_path/
-            ├── imaging.imagingLightSource.npy
-            ├── imaging.times.npy
-            ├── imagingLightSource.properties.htsv
-            ├── widefieldChannels.frameAverage.npy
-            ├── widefieldSVT.haemoCorrected.npy
-            ├── widefieldSVT.uncorrected.npy
-            └── widefieldU.images.npy
+        Main class for extracting SVD data from IBL widefield processed data
+        via the ONE API.
 
         Parameters
         ----------
-        folder_path: str or Path
-            Path to the folder containing segmentation data files.
-        excitation_wavelength_nm: int
+        one : ONE
+            The ONE API instance for data access.
+        session : str
+            The session ID (eid).
+        excitation_wavelength_nm : int
             The excitation wavelength (in nm) for the channel to load.
         """
         super().__init__()
 
-        self.folder_path = Path(folder_path)
+        self.one = one
+        self.session = session
         self.excitation_wavelength_nm = excitation_wavelength_nm
 
-        # Timestamps (both channels)
-        self._timestamps_file_name = "imaging.times.npy"
-        # Imaging light source properties (contains channel ids for each wavelength)
-        self._imaging_light_source_properties_file_name = "imagingLightSource.properties.htsv"
-        self._imaging_light_source_file_name = "imaging.imagingLightSource.npy"
-        # Raw traces (both channels)
-        self._raw_traces_file_name = "widefieldSVT.uncorrected.npy"
-        # Corrected traces (only calcium channel)
-        self._corrected_traces_file_name = "widefieldSVT.haemoCorrected.npy"
-        # ROI masks (same for both channels)
-        self._ROI_masks_file_name = "widefieldU.images.npy"
-        # summary images (both channels)
-        self._mean_image_file_name = "widefieldChannels.frameAverage.npy"
+        self._channel_names = ["OpticalChannel"]
 
         # Contains channel_id, color, wavelength information for the selected excitation wavelength
         imaging_light_source_properties = self.get_imaging_light_source_properties()
         if len(imaging_light_source_properties) == 0:
             raise ValueError(f"No properties found for excitation wavelength '{self.excitation_wavelength_nm}' nm.")
         self.channel_id = imaging_light_source_properties["channel_id"]
-        self._channel_names = ["OpticalChannel"]
 
         # This is available for both channels
         all_times = self._load_times()
@@ -82,51 +63,41 @@ class WidefieldSVDExtractor(SegmentationExtractor):
         )
         self._properties = {}
 
-    # TODO: replace with loading from ONE API
     def _load_times(self) -> np.ndarray:
-        all_imaging_times = np.load(self.folder_path / self._timestamps_file_name)
-        return all_imaging_times
+        return self.one.load_dataset(id=self.session, dataset="imaging.times", collection=self.COLLECTION)
 
-    # TODO: replace with loading from ONE API
     def _load_imaging_light_source_properties(self) -> pd.DataFrame:
-        all_imaging_light_source_properties = pd.read_csv(
-            self.folder_path / self._imaging_light_source_properties_file_name
-        )
-        return all_imaging_light_source_properties
+        # ONE's loader misparses this file because the separator varies by lab
+        # (some sessions use comma, others use tab despite the .htsv extension).
+        # Use sep=None with the Python engine to auto-detect the separator.
+        session_path = self.one.eid2path(self.session)
+        htsv_path = session_path / "alf/widefield/imagingLightSource.properties.htsv"
+        return pd.read_csv(htsv_path, sep=None, engine="python")
 
-    # TODO: replace with loading from ONE API
     def _load_roi_response_raw(self) -> np.ndarray:
-        all_roi_response_raw = np.load(self.folder_path / self._raw_traces_file_name)
-        return all_roi_response_raw
+        return self.one.load_dataset(id=self.session, dataset="widefieldSVT.uncorrected", collection=self.COLLECTION)
 
-    # TODO: replace with loading from ONE API
     def _load_roi_response_dff(self) -> np.ndarray:
-        all_roi_response_dff = np.load(self.folder_path / self._corrected_traces_file_name)
-        return all_roi_response_dff
+        return self.one.load_dataset(id=self.session, dataset="widefieldSVT.haemoCorrected", collection=self.COLLECTION)
 
-    # TODO: replace with loading from ONE API
     def _load_mean_image(self) -> np.ndarray:
-        mean_images = np.load(self.folder_path / self._mean_image_file_name)
+        mean_images = self.one.load_dataset(
+            id=self.session, dataset="widefieldChannels.frameAverage", collection=self.COLLECTION
+        )
         first_frame_index = self._frames_indices[0]
         mean_image = mean_images[first_frame_index, ...]
         return mean_image if not TRANSPOSE_OUTPUT else mean_image.transpose()
 
-    # TODO: replace with loading from ONE API
     def _load_images(self):
-        all_images = np.load(self.folder_path / self._ROI_masks_file_name)
-        return all_images
+        return self.one.load_dataset(id=self.session, dataset="widefieldU.images", collection=self.COLLECTION)
 
-    # TODO: replace with loading from ONE API
     def _load_imaging_light_source(self) -> np.ndarray:
-        return np.load(self.folder_path / self._imaging_light_source_file_name, allow_pickle=True)
+        return self.one.load_dataset(id=self.session, dataset="imaging.imagingLightSource", collection=self.COLLECTION)
 
-    # TODO: replace with loading from ONE API
     def get_imaging_light_source_properties(self) -> Dict[str, Any]:
-        all_imaging_light_source_properties = self._load_imaging_light_source_properties()
-        this_properties = all_imaging_light_source_properties[
-            all_imaging_light_source_properties["wavelength"] == self.excitation_wavelength_nm
-        ]
-        return this_properties.to_dict(orient="records")[0]
+        all_props = self._load_imaging_light_source_properties()
+        this_props = all_props[all_props["wavelength"] == self.excitation_wavelength_nm]
+        return this_props.to_dict(orient="records")[0]
 
     def get_frame_indices(self) -> np.ndarray:
         """Get the frame indices for the selected channel.
@@ -177,12 +148,10 @@ class WidefieldSVDExtractor(SegmentationExtractor):
         timestamps : np.ndarray or None
             The original timestamps in seconds, or None if not available.
         """
-        all_times = np.load(self.folder_path / self._timestamps_file_name)
-        light_sources = np.load(self.folder_path / self._imaging_light_source_file_name)
-
+        all_times = self._load_times()
+        light_sources = self._load_imaging_light_source()
         native_timestamps = all_times[light_sources == self.channel_id]
 
-        # Set defaults
         if start_sample is None:
             start_sample = 0
         if end_sample is None:
@@ -200,12 +169,13 @@ class WidefieldSVDExtractor(SegmentationExtractor):
         """
         if not hasattr(self, "_frame_shape"):
             image_mean = self._load_mean_image()
-            assert image_mean is not None, f"{self._mean_image_file_name} is required but could not be loaded"
+            assert image_mean is not None, "widefieldChannels.frameAverage is required but could not be loaded"
             self._frame_shape = (image_mean.shape[0], image_mean.shape[1])
         return self._frame_shape
 
     def _get_rois_responses(self) -> List[_RoiResponse]:
         """Load the ROI responses from uncorrected and corrected files.
+
         Returns
         -------
         _roi_responses: List[_RoiResponse]
@@ -214,9 +184,7 @@ class WidefieldSVDExtractor(SegmentationExtractor):
         if not self._roi_responses:
             self._roi_responses = []
 
-            # This loads the raw traces for all channels
             raw_traces = self._load_roi_response_raw()
-            # Originally this is (num_rois, num_timepoints), we transpose to (num_timepoints, num_rois)
             frame_indices = self.get_frame_indices()
             raw_traces = raw_traces[:, frame_indices].T
 
@@ -224,9 +192,7 @@ class WidefieldSVDExtractor(SegmentationExtractor):
             self._roi_responses.append(_RoiResponse("raw", raw_traces, cell_ids))
 
             if self.excitation_wavelength_nm == 470:
-                # widefieldSVT.haemoCorrected.npy
                 dff_traces = self._load_roi_response_dff()
-                # This is again (num_rois, num_timepoints), we transpose to (num_timepoints, num_rois)
                 dff_traces = dff_traces.T
                 self._roi_responses.append(_RoiResponse("haemocorrected", dff_traces, list(cell_ids)))
 

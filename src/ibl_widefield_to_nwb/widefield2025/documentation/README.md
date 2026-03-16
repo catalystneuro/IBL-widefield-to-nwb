@@ -117,7 +117,9 @@ eid = "d34a502f-bd06-471f-8334-df41f785e1d9"  # example session
 | SVD spatial components (U) | | ✓ | `PlaneSegmentation` (processing/ophys) |
 | SVD temporal traces (SVT) | | ✓ | `RoiResponseSeries` (processing/ophys) |
 | Mean images per wavelength | | ✓ | `GrayscaleImage` in `Images` (processing/ophys) |
-| Anatomical landmarks + CCF transform | ✓ | ✓ | `Localization`, `AtlasRegistration` (lab_meta_data) |
+| Anatomical landmarks + CCF transform | ✓ | ✓ | `Landmarks`, `AtlasRegistration` (lab_meta_data) |
+| Per-pixel atlas coordinates (IBL bregma + CCFv3) | ✓ | ✓ | `AnatomicalCoordinatesImage` ×2 (lab_meta_data/Localization) |
+| Brain region masks (registered + source space) | ✓ | ✓ | `BrainRegionMasks` ×2 (lab_meta_data/Localization) |
 | **Synchronization** | | | |
 | NIDQ digital channels | ✓ | | `LabeledEvents` (acquisition) |
 | NIDQ analog channels | ✓ | | `TimeSeries` (acquisition) |
@@ -147,7 +149,7 @@ eid = "d34a502f-bd06-471f-8334-df41f785e1d9"  # example session
 | `ndx_events` | `LabeledEvents` (sync channels); `Events` (lick times) |
 | `ndx_pose` | `PoseEstimation` / `PoseEstimationSeries` for LightningPose / DLC |
 | `ndx_ibl` | `IblSubject`, `IblMetadata` for IBL-specific session metadata |
-| `ndx_anatomical_localization` | `Localization`, `Landmarks`, `AtlasRegistration` for atlas registration (enabled in both raw and processed pipelines; `AnatomicalCoordinatesImage` pixel-space coordinates in progress) |
+| `ndx_anatomical_localization` | `Localization`, `AtlasRegistration`, `Landmarks`, `AffineTransformation`, `AnatomicalCoordinatesImage` (IBL bregma + CCFv3), `BrainRegionMasks` (registered + source), `AnatomicalCoordinatesTable` (IBL bregma + CCFv3) — enabled in both raw and processed pipelines |
 
 ---
 

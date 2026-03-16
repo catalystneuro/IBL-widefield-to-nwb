@@ -55,20 +55,25 @@ the clock at t=0 when recording begins.
 
 **Where:** `IblWidefieldLandmarksInterface`
 
-**Status: Partially resolved.** The landmarks interface is now enabled in both the raw and
+**Status: Resolved.** The landmarks interface is fully implemented in both the raw and
 processed pipelines. It is included conditionally whenever `widefieldLandmarks.dorsalCortex.json`
 is available for a session. The interface writes:
+
 - Named landmark pixel coordinates (`Landmarks` table)
 - Affine transform to Allen CCFv3 (`AffineTransformation`, `AtlasRegistration`)
 - Atlas coordinates for each landmark in IBL bregma space and CCFv3 space
   (`AnatomicalCoordinatesTable` objects)
+- Per-pixel physical coordinates in IBL bregma space for every pixel of the registered image
+  (`AnatomicalCoordinatesImageIBLBregma` — x=ML, y=AP, z=DV, units µm)
+- Per-pixel physical coordinates in Allen CCFv3 space for every pixel of the registered image
+  (`AnatomicalCoordinatesImageCCFv3` — x=AP, y=DV, z=ML, units µm, PIR orientation)
+- Sparse pixel-level Allen brain region masks for the registered image
+  (`RegisteredImageBrainRegionMasksIBLBregma`) and the source (camera) image
+  (`SourceImageBrainRegionMasksIBLBregma`), both stored under `Localization`
 
-**Outstanding:** An `AnatomicalCoordinatesImage` object that provides per-pixel (x, y, z)
-atlas coordinates in the **source image space** — directly linked to the `OnePhotonSeries`
-(raw pipeline) or mean image (processed pipeline) — is still under development. This requires
-applying the affine transform to every pixel of the imaging frame to produce a coordinate
-image, and then linking that image to the NWB acquisition object. The `ndx_anatomical_localization`
-extension interface for this is being finalized.
+All objects are stored under `nwbfile.lab_meta_data["localization"]` (type `Localization`) and
+`nwbfile.lab_meta_data["atlas_registration"]` (type `AtlasRegistration`).
+See `processed_nwb.md` and `raw_nwb.md` Section 2/5 for the full NWB output tables.
 
 ---
 
@@ -150,8 +155,8 @@ with NWBHDF5IO("sub-FD-28_ses-81f90b18-..._desc-raw_behavior+ophys.nwb", "r") as
 `imaging.imagingLightSource.npy` (249,773 entries) is one element **longer** than
 `imaging.times.npy` (249,772 entries). The IBL sync pipeline assigned a wavelength index
 to all 249,773 trigger pulses but produced a synchronized timestamp for only 249,772 of
-them. The production code in `utils/_widefield_times.py` already handles this silently by
-truncating to `min(len(all_times), len(light_sources))`.
+them. The production code in `WidefieldImagingInterface.get_aligned_timestamps()` already handles
+this silently by truncating to `min(len(all_times), len(light_sources))`.
 
 **Our interpretation:**
 

@@ -1,15 +1,13 @@
 from copy import deepcopy
 from pathlib import Path
 
+from ibl_to_nwb.datainterfaces._base_ibl_interface import BaseIBLDataInterface
 from neuroconv.datainterfaces.ophys.basesegmentationextractorinterface import (
     BaseSegmentationExtractorInterface,
 )
 from neuroconv.utils import DeepDict, load_dict_from_file
-from pydantic import DirectoryPath
+from one.api import ONE
 
-from ibl_widefield_to_nwb.widefield2025.datainterfaces._base_ibl_interface import (
-    BaseIBLDataInterface,
-)
 from ibl_widefield_to_nwb.widefield2025.datainterfaces._ibl_widefield_SVDextractor import (
     WidefieldSVDExtractor,
 )
@@ -54,7 +52,8 @@ class WidefieldSVDInterface(BaseSegmentationExtractorInterface, BaseIBLDataInter
 
     def __init__(
         self,
-        folder_path: DirectoryPath,
+        one: ONE,
+        session: str,
         excitation_wavelength_nm: int,
         verbose: bool = False,
     ):
@@ -62,15 +61,17 @@ class WidefieldSVDInterface(BaseSegmentationExtractorInterface, BaseIBLDataInter
 
         Parameters
         ----------
-        folder_path : DirectoryPath
-            Path to the folder containing the processed Widefield data.
+        one : ONE
+            The ONE API instance for data access.
+        session : str
+            The session ID (eid).
         excitation_wavelength_nm : int
             The excitation wavelength (in nm) for the channel to load.
         verbose : bool, default : False
             Whether to print verbose output.
         """
         self.verbose = verbose
-        super().__init__(folder_path=folder_path, excitation_wavelength_nm=excitation_wavelength_nm)
+        super().__init__(one=one, session=session, excitation_wavelength_nm=excitation_wavelength_nm)
 
     def get_metadata(self) -> DeepDict:
         """

@@ -7,15 +7,12 @@ NWBFile:
   #  https://doi.org/### or link to APA or MLA citation of the publication
   session_description:
     A rich text description of the experiment. Can also just be the abstract of the publication.
-  institution: Institution where the lab is located
-  lab: IBL
   experimenter:
     - Last, First Middle
     - Last, First Middle
 Subject:
   species: Mus musculus  # Example
   strain: C57BL/6 # Copied form IBL-to-nwb
-  description: A rich text description of the subject
-  age: TBD  # in ISO 8601, such as "P1W2D"
-  sex: U  # One of M, F, U, or O
-  date_of_birth: 2014-06-22 00:00:00-04:00  # Example
+  description: | # Copied form IBL-to-nwb
+    Mice were housed under a 12/12 h light/dark cycle (normal or inverted depending on the laboratory) with food and water 112 available ad libitum, except during behavioural training days. Electrophysiological recordings and behavioural training were performed during either the dark or light phase of the subject cycle depending on the laboratory. Subjects were obtained from either the Jackson Laboratory or Charles River.
+  #age: TBD  # in ISO 8601, such as "P1W2D"

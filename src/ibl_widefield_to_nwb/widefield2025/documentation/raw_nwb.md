@@ -85,7 +85,8 @@ one.load_dataset(eid, "imagingLightSource.properties", collection="alf/widefield
 **Frame cache:** The raw `.mov` (JPEG2000 compressed) is decoded once into a binary
 `frames.dat` memmap file using `build_frame_cache()` in `conversion/build_cache.py`.
 This enables fast random-access frame reads during NWB writing without re-decoding.
-The cache is stored at `cache_dir_path` (specified at conversion time).
+The cache path is auto-derived inside `convert_raw_session()` as
+`one.eid2path(eid) / "raw_widefield_data" / "wf_cache"` — no path argument is required.
 
 **Dual-wavelength demultiplexing:** Frames alternate between two excitation wavelengths.
 `WidefieldRawNWBConverter.temporally_align_data_interfaces()` reads
@@ -385,16 +386,22 @@ resolution.
 
 | Location | NWB name | Type | Description |
 |---|---|---|---|
-| `nwbfile.lab_meta_data` | `Localization` | `Localization` | Root container for spatial registration |
+| `nwbfile.lab_meta_data` | `atlas_registration` | `AtlasRegistration` | Images, affine transform, and landmarks grouped together |
+| — | `MeanImage` | `GrayscaleImage` | Source (camera-space) mean FOV image |
+| — | `RegisteredImage` | `GrayscaleImage` | Mean FOV warped into atlas space |
+| — | `AtlasProjectionImage` | `GrayscaleImage` | Allen CCF dorsal-cortex reference projection |
+| — | `AffineTransformation` | `AffineTransformation` | 3×3 homogeneous affine matrix: source px → registered px |
+| — | `landmarks` | `Landmarks` | Table of named anatomical landmarks (source, registered, and reference pixel coords) |
+| `nwbfile.lab_meta_data` | `localization` | `Localization` | Root container for coordinate spaces and dense coordinate maps |
 | — | `IBLBregmaProjection` | `Space` | IBL bregma coordinate frame (RAS: x=ML, y=AP, z=DV; units: µm) |
-| — | `AllenCCFv3Space` | `Space` | Allen CCFv3 reference frame (PIR+ orientation) |
-| `Localization` | `landmarks` | `Landmarks` | Table of named anatomical landmarks |
-| `Localization` | `affine_transformation` | `AffineTransformation` | 3×3 affine matrix from image space to atlas space |
-| `Localization` | `AtlasRegistration` | `AtlasRegistration` | Links landmarks and transformation |
+| — | `AllenCCFv3Space` | `AllenCCFv3Space` | Allen CCFv3 reference frame (PIR+ orientation; units: µm) |
+| `Localization` | `AnatomicalCoordinatesImageIBLBregma` | `AnatomicalCoordinatesImage` | Per-pixel (x=ML, y=AP, z=DV) in IBL bregma space + Allen region acronym for every pixel of the registered image |
+| `Localization` | `AnatomicalCoordinatesImageCCFv3` | `AnatomicalCoordinatesImage` | Per-pixel (x=AP, y=DV, z=ML) in Allen CCFv3 space + Allen region acronym for every pixel of the registered image |
+| `Localization` | `RegisteredImageBrainRegionMasksIBLBregma` | `BrainRegionMasks` | Sparse table of (x, y, brain_region_id) for every in-atlas pixel of the registered image |
+| `Localization` | `SourceImageBrainRegionMasksIBLBregma` | `BrainRegionMasks` | Same masks warped back to source (camera) image space via inverse affine |
 | `Localization` | `AnatomicalCoordinatesIBLBregma` | `AnatomicalCoordinatesTable` | Landmark coordinates in IBL bregma space (µm) |
-| `Localization` | `AnatomicalCoordinatesCCFv3` | `AnatomicalCoordinatesTable` | Landmark coordinates in Allen CCFv3 space |
+| `Localization` | `AnatomicalCoordinatesCCFv3` | `AnatomicalCoordinatesTable` | Landmark coordinates in Allen CCFv3 space (µm) |
 
-> **Note:** An `AnatomicalCoordinatesImage` object providing per-pixel (x, y, z) coordinates
-> in source image space (linking directly to the `OnePhotonSeries`) is under development.
-> This will allow downstream tools to map any pixel in the raw imaging frames to its
-> corresponding atlas coordinate.
+`AnatomicalCoordinatesImageIBLBregma` and `AnatomicalCoordinatesImageCCFv3` are linked to
+`OnePhotonSeriesCalcium` via their `localized_entity` field when the raw pipeline is used.
+Out-of-atlas pixels carry the string `"out-of-atlas"` in the `brain_region` array.

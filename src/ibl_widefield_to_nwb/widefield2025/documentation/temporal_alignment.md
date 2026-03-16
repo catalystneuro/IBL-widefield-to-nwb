@@ -65,8 +65,9 @@ the same sync signals as NIDQ (camera TTLs, frame trigger, rotary encoder, audio
 The only alignment step performed here is **wavelength demultiplexing**: splitting the
 interleaved `imaging.times.npy` array into two per-wavelength timestamp arrays (470 nm and
 405 nm) using `imaging.imagingLightSource.npy`. This is done in
-`WidefieldRawNWBConverter.temporally_align_data_interfaces()` before any data is written.
-No clock-drift correction is applied.
+`WidefieldRawNWBConverter.temporally_align_data_interfaces()`, which calls
+`WidefieldImagingInterface.get_aligned_timestamps()` on each interface before any data is
+written.
 
 ---
 

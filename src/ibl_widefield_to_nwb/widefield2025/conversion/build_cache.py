@@ -7,6 +7,34 @@ import numpy as np
 from pydantic import DirectoryPath
 
 
+def _get_batch_size(
+    frame_height: int, frame_width: int, dtype: np.dtype = np.dtype("uint8"), max_fraction: float = 0.25
+) -> int:
+    """
+    Compute the number of frames that fit in a fraction of available RAM.
+
+    Parameters
+    ----------
+    frame_height, frame_width : int
+        Spatial dimensions of a single grayscale frame.
+    dtype : np.dtype
+        Data type of the frames (default uint8).
+    max_fraction : float
+        Fraction of available (free) RAM to use for the buffer (default 0.25 = 25%).
+
+    Returns
+    -------
+    int
+        Number of frames per batch, clamped to [1, 1024].
+    """
+    import psutil
+
+    bytes_per_frame = frame_height * frame_width * np.dtype(dtype).itemsize
+    available_bytes = psutil.virtual_memory().available
+    batch_size = int(available_bytes * max_fraction / bytes_per_frame)
+    return max(1, min(batch_size, 1024))
+
+
 def build_frame_cache(folder_path: DirectoryPath, cache_folder_path: DirectoryPath = None, overwrite: bool = False):
     """
     Create a disk cache of grayscale frames as a single memory-mapped array.
@@ -34,6 +62,7 @@ def build_frame_cache(folder_path: DirectoryPath, cache_folder_path: DirectoryPa
     """
     import cv2
     from neuroconv.datainterfaces.behavior.video.video_utils import VideoCaptureContext
+    from tqdm import tqdm
 
     print(f"Building frame cache at {cache_folder_path} ...")
     frame_cache_start = time.time()
@@ -68,15 +97,17 @@ def build_frame_cache(folder_path: DirectoryPath, cache_folder_path: DirectoryPa
     mem = np.memmap(str(data_path), dtype=frame_dtype, mode="w+", shape=(total_num_samples, height, width))
 
     frame_index = 0
-    while frame_index < total_num_samples:
-        try:
-            frame = next(video_capture_ob)
-        except StopIteration:
-            break
+    with tqdm(total=total_num_samples, desc="Caching frames", unit="frame") as pbar:
+        while frame_index < total_num_samples:
+            try:
+                frame = next(video_capture_ob)
+            except StopIteration:
+                break
 
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        mem[frame_index] = gray
-        frame_index += 1
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            mem[frame_index] = gray
+            frame_index += 1
+            pbar.update(1)
 
     # flush and release
     mem.flush()
