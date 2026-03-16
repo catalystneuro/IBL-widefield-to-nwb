@@ -4,6 +4,7 @@ from typing import Literal
 
 import numpy as np
 import pandas as pd
+from ibl_to_nwb.datainterfaces._base_ibl_interface import BaseIBLDataInterface
 from neuroconv.datainterfaces.ophys.baseimagingextractorinterface import (
     BaseImagingExtractorInterface,
 )
@@ -11,9 +12,6 @@ from neuroconv.utils import DeepDict, dict_deep_update, load_dict_from_file
 from one.api import ONE
 from pydantic import DirectoryPath
 
-from ibl_widefield_to_nwb.widefield2025.datainterfaces._base_ibl_interface import (
-    BaseIBLDataInterface,
-)
 from ibl_widefield_to_nwb.widefield2025.datainterfaces._ibl_widefield_imagingextractor import (
     TRANSPOSE_OUTPUT,
     WidefieldImagingExtractor,

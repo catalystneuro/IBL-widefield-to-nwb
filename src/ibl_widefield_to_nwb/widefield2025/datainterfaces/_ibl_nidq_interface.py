@@ -1,14 +1,11 @@
 from pathlib import Path
 from warnings import warn
 
+from ibl_to_nwb.datainterfaces._base_ibl_interface import BaseIBLDataInterface
 from ibl_to_nwb.utils import decompress_ephys_cbins
 from neuroconv.datainterfaces import SpikeGLXNIDQInterface
 from neuroconv.utils import dict_deep_update, load_dict_from_file
 from one.api import ONE
-
-from ibl_widefield_to_nwb.widefield2025.datainterfaces._base_ibl_interface import (
-    BaseIBLDataInterface,
-)
 
 # =============================================================================
 # Digital Device Labels (needed at init time for digital_channel_groups)

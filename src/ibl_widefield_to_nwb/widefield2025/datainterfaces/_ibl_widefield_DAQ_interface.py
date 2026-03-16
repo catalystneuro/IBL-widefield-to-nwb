@@ -2,14 +2,11 @@ import warnings
 from pathlib import Path
 
 import numpy as np
+from ibl_to_nwb.datainterfaces._base_ibl_interface import BaseIBLDataInterface
 from neuroconv.utils import dict_deep_update, load_dict_from_file
 from one.api import ONE
 from pynwb import NWBFile
 from pynwb.base import TimeSeries
-
-from ibl_widefield_to_nwb.widefield2025.datainterfaces._base_ibl_interface import (
-    BaseIBLDataInterface,
-)
 
 # =============================================================================
 # Digital Device Labels
