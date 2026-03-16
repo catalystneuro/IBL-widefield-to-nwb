@@ -84,9 +84,6 @@ class WidefieldProcessedNWBConverter(IblConverter):
 class WidefieldRawNWBConverter(IblConverter):
     """Primary conversion class for Widefield raw imaging data."""
 
-    FUNCTIONAL_WAVELENGTH_NM = 470
-    ISOSBESTIC_WAVELENGTH_NM = 405
-
     def get_metadata(self):
         metadata = super().get_metadata()
 
