@@ -31,7 +31,11 @@ alf/widefield/
 alf/widefield/
 └── widefieldLandmarks.        ──→  IblWidefieldLandmarksInterface ──→  Localization
     dorsalCortex.json                                                   Landmarks, AtlasRegistration
-                                                                        AnatomicalCoordinatesTable*
+                                                                        AnatomicalCoordinatesImageIBLBregma
+                                                                        AnatomicalCoordinatesImageCCFv3
+                                                                        RegisteredImageBrainRegionMasksIBLBregma
+                                                                        SourceImageBrainRegionMasksIBLBregma
+                                                                        AnatomicalCoordinatesTable (×2)
                                                                         (lab_meta_data)
 
 BEHAVIORAL TASKS
@@ -170,10 +174,9 @@ print(f"Reconstructed stack shape (time, height, width): {stack.shape}")
 
 **Interface:** `IblWidefieldLandmarksInterface`
 
-> **Status: Enabled.** The landmarks interface is active in both the raw and processed pipelines.
-> It is included whenever `widefieldLandmarks.dorsalCortex.json` is available for a session.
-> An `AnatomicalCoordinatesImage` providing per-pixel atlas coordinates in source image space
-> (linked to the mean image / `OnePhotonSeries`) is under development.
+> **Status: Fully implemented.** The landmarks interface is active in both the raw and processed
+> pipelines. It is included whenever `widefieldLandmarks.dorsalCortex.json` is available for a
+> session.
 
 **Source file:**
 
@@ -195,18 +198,25 @@ resolution.
 
 | Location | NWB name | Type | Description |
 |---|---|---|---|
-| `nwbfile.lab_meta_data` | `Localization` | `Localization` | Root container for spatial registration |
+| `nwbfile.lab_meta_data` | `atlas_registration` | `AtlasRegistration` | Images, affine transform, and landmarks grouped together |
+| — | `MeanImage` | `GrayscaleImage` | Source (camera-space) mean FOV image |
+| — | `RegisteredImage` | `GrayscaleImage` | Mean FOV warped into atlas space |
+| — | `AtlasProjectionImage` | `GrayscaleImage` | Allen CCF dorsal-cortex reference projection |
+| — | `AffineTransformation` | `AffineTransformation` | 3×3 homogeneous affine matrix: source px → registered px |
+| — | `landmarks` | `Landmarks` | Table of named anatomical landmarks (source, registered, and reference pixel coords) |
+| `nwbfile.lab_meta_data` | `localization` | `Localization` | Root container for coordinate spaces and dense coordinate maps |
 | — | `IBLBregmaProjection` | `Space` | IBL bregma coordinate frame (RAS: x=ML, y=AP, z=DV; units: µm) |
-| — | `AllenCCFv3Space` | `Space` | Allen CCFv3 reference frame (PIR+ orientation) |
-| `processing["ophys"]` | `RegisteredImages` | `Images` | Widefield FOV images in registered space |
-| — | `RegisteredImage` | `GrayscaleImage` | Post-registration mean FOV image |
-| — | `AtlasProjectionImage` | `GrayscaleImage` | Allen CCF dorsal cortex atlas projection |
-| `Localization` | `landmarks` | `Landmarks` | Table of named anatomical landmarks |
-| `Localization` | `affine_transformation` | `AffineTransformation` | 3×3 affine matrix from image space to atlas space |
-| `Localization` | `AtlasRegistration` | `AtlasRegistration` | Links images, landmarks, and transformation |
+| — | `AllenCCFv3Space` | `AllenCCFv3Space` | Allen CCFv3 reference frame (PIR+ orientation; units: µm) |
+| `Localization` | `AnatomicalCoordinatesImageIBLBregma` | `AnatomicalCoordinatesImage` | Per-pixel (x=ML, y=AP, z=DV) in IBL bregma space + Allen region acronym for every pixel of the registered image |
+| `Localization` | `AnatomicalCoordinatesImageCCFv3` | `AnatomicalCoordinatesImage` | Per-pixel (x=AP, y=DV, z=ML) in Allen CCFv3 space + Allen region acronym for every pixel of the registered image |
+| `Localization` | `RegisteredImageBrainRegionMasksIBLBregma` | `BrainRegionMasks` | Sparse table of (x, y, brain_region_id) for every in-atlas pixel of the registered image |
+| `Localization` | `SourceImageBrainRegionMasksIBLBregma` | `BrainRegionMasks` | Same masks warped back to source (camera) image space via inverse affine |
 | `Localization` | `AnatomicalCoordinatesIBLBregma` | `AnatomicalCoordinatesTable` | Landmark coordinates in IBL bregma space (µm) |
-| `Localization` | `AnatomicalCoordinatesCCFv3` | `AnatomicalCoordinatesTable` | Landmark coordinates in Allen CCFv3 space |
-| `Localization` | `RegisteredImageAnatomicalCoordinatesIBLBregma` | `AnatomicalCoordinatesImage` | Per-pixel (x, y, z) in IBL bregma space + Allen region ID/acronym |
+| `Localization` | `AnatomicalCoordinatesCCFv3` | `AnatomicalCoordinatesTable` | Landmark coordinates in Allen CCFv3 space (µm) |
+
+Out-of-atlas pixels carry the string `"out-of-atlas"` in the `brain_region` array of both
+`AnatomicalCoordinatesImage` objects. `BrainRegionMasks` entries use integer Allen structure IDs
+(0 = outside atlas).
 
 ---
 
