@@ -16,6 +16,7 @@ def session_to_nwb(
     nwbfiles_folder_path: str | Path,
     functional_wavelength_nm: int,
     isosbestic_wavelength_nm: int,
+    general_metadata_path: Path | None = None,
     mode: str = "raw",
     force_cache: bool = False,
     stub_test: bool = False,
@@ -38,6 +39,11 @@ def session_to_nwb(
         Wavelength (in nm) for the functional imaging data.
     isosbestic_wavelength_nm: int
         Wavelength (in nm) for the isosbestic imaging data.
+    general_metadata_path: Path, optional
+        Path to the dataset-specific general metadata YAML (NWBFile + Subject fields).
+        If None, falls back to the generic ``_metadata/widefield_general_metadata.yaml``.
+        Use ``_metadata/widefield_general_metadata_CSK.yaml`` for the IBL BWM dataset
+        and ``_metadata/widefield_general_metadata_FD.yaml`` for the Nrxn1α KO dataset.
     mode: str, default: "raw"
         Mode of conversion. Options are "raw" or "processed".
     force_cache: bool, default: False
@@ -57,6 +63,7 @@ def session_to_nwb(
                 nwbfiles_folder_path=nwbfiles_folder_path,
                 functional_wavelength_nm=functional_wavelength_nm,
                 isosbestic_wavelength_nm=isosbestic_wavelength_nm,
+                general_metadata_path=general_metadata_path,
                 force_cache=force_cache,
                 stub_test=stub_test,
             )
@@ -67,6 +74,7 @@ def session_to_nwb(
                 nwbfiles_folder_path=nwbfiles_folder_path,
                 functional_wavelength_nm=functional_wavelength_nm,
                 isosbestic_wavelength_nm=isosbestic_wavelength_nm,
+                general_metadata_path=general_metadata_path,
                 stub_test=stub_test,
             )
         case _:
