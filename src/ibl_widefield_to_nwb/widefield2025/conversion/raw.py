@@ -30,6 +30,7 @@ def convert_raw_session(
     nwbfiles_folder_path: str | Path,
     functional_wavelength_nm: int,
     isosbestic_wavelength_nm: int,
+    general_metadata_path: Path | None = None,
     force_cache: bool = False,
     stub_test: bool = False,
 ) -> Path:
@@ -49,6 +50,9 @@ def convert_raw_session(
         Wavelength (in nm) for the functional (calcium) imaging data.
     isosbestic_wavelength_nm: int
         Wavelength (in nm) for the isosbestic imaging data.
+    general_metadata_path: Path, optional
+        Path to the dataset-specific general metadata YAML (NWBFile + Subject fields).
+        If None, falls back to the generic ``_metadata/widefield_general_metadata.yaml``.
     force_cache: bool, default: False
         If True, force rebuilding of the cache even if it already exists.
     stub_test: bool, default: False
@@ -208,6 +212,7 @@ def convert_raw_session(
         one=one,
         session=eid,
         data_interfaces=data_interfaces,
+        general_metadata_path=general_metadata_path,
     )
 
     # ========================================================================
