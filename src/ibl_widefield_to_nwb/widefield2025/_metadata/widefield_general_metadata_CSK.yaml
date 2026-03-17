@@ -1,0 +1,109 @@
+NWBFile:
+  related_publications:
+    - "doi:10.1038/s41586-025-09226-1"
+  keywords:
+    - widefield calcium imaging
+    - decision-making
+    - prior information
+    - Bayesian inference
+    - IBL
+    - brain-wide
+    - dorsal cortex
+    - visual cortex
+    - motor cortex
+    - decoding
+  experiment_description: >
+    The neural representations of prior information about the state of the world are poorly
+    understood. Here, to investigate them, we examined brain-wide Neuropixels recordings and
+    widefield calcium imaging collected by the International Brain Laboratory. Mice were trained
+    to indicate the location of a visual grating stimulus, which appeared on the left or right
+    with a prior probability alternating between 0.2 and 0.8 in blocks of variable length. We
+    found that mice estimate this prior probability and thereby improve their decision accuracy.
+    Furthermore, we report that this subjective prior is encoded in at least 20% to 30% of brain
+    regions, notably, that span all levels of processing, from early sensory areas (the lateral
+    geniculate nucleus and primary visual cortex) to motor regions (secondary and primary motor
+    cortex and gigantocellular reticular nucleus) and high-level cortical regions (the dorsal
+    anterior cingulate area and ventrolateral orbitofrontal cortex). This widespread representation
+    of the prior is consistent with a neural model of Bayesian inference involving loops between
+    areas, as opposed to a model in which the prior is incorporated only in decision-making areas.
+    This study offers a brain-wide perspective on prior encoding at cellular resolution,
+    underscoring the importance of using large-scale recordings on a single standardized task.
+  experimenter:
+    # Named authors from Findling et al., Nature 2025 (doi:10.1038/s41586-025-09226-1)
+    # Data were collected as part of the International Brain Laboratory consortium.
+    - Findling, Charles
+    - Hubert, Félix
+    - Acerbi, Luigi
+    - Benson, Brandon
+    - Benson, Julius
+    - Birman, Daniel
+    - Bonacchi, Niccolò
+    - Buchanan, E. Kelly
+    - Bruijns, Sebastian
+    - Carandini, Matteo
+    - Catarino, Joana A.
+    - Chapuis, Gaelle A.
+    - Churchland, Anne K.
+    - Dan, Yang
+    - Davatolhagh, Felicia
+    - DeWitt, Eric E. J.
+    - Engel, Tatiana A.
+    - Fabbri, Michele
+    - Faulkner, Mayo A.
+    - Fiete, Ila Rani
+    - Freitas-Silva, Laura
+    - Gerçek, Berk
+    - Harris, Kenneth D.
+    - Häusser, Michael
+    - Hofer, Sonja B.
+    - Hu, Fei
+    - Huntenburg, Julia M.
+    - Khanal, Anup
+    - Krasniak, Chris
+    - Langdon, Christopher
+    - Langfield, Christopher A.
+    - Latham, Peter E.
+    - Lau, Petrina Y. P.
+    - Mainen, Zach
+    - Meijer, Guido T.
+    - Miska, Nathaniel J.
+    - Mrsic-Flogel, Thomas D.
+    - Noel, Jean-Paul
+    - Nylund, Kai
+    - Pan-Vazquez, Alejandro
+    - Paninski, Liam
+    - Pillow, Jonathan
+    - Rossant, Cyrille
+    - Roth, Noam
+    - Schaeffer, Rylan
+    - Schartner, Michael
+    - Shi, Yanliang
+    - Socha, Karolina Z.
+    - Steinmetz, Nicholas A.
+    - Svoboda, Karel
+    - Tessereau, Charline
+    - Urai, Anne E.
+    - Wells, Miles J.
+    - West, Steven Jon
+    - Whiteway, Matthew R.
+    - Winter, Olivier
+    - Witten, Ilana B.
+    - Zador, Anthony
+    - Zhang, Yizi
+    - Dayan, Peter
+    - Pouget, Alexandre
+
+Subject:
+  species: Mus musculus
+  strain: C57BL/6
+  description: >
+    Animals were housed under a 12 h–12 h light–dark cycle—either normal or inverted, depending
+    on the laboratory—and had unrestricted access to food and water except on training days.
+    Depending on the laboratory, electrophysiology recordings and behavioural training took place
+    during either the light or dark phase of the cycle. In total, data were collected from 139
+    adult C57BL/6 mice (94 male, 45 female), purchased from Jackson Laboratory or Charles River.
+    On the day of electrophysiological recording, mice ranged in age from 13 to 178 weeks
+    (mean 44.96 weeks; median 27.0 weeks) and weighed between 16.1 and 35.7 g (mean 23.9 g,
+    median 23.84 g). Widefield calcium imaging was performed in a subset of 6 mice across
+    52 sessions. All experimental procedures were conducted in accordance with local laws and
+    approved by the relevant institutional ethics committees.

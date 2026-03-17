@@ -1,0 +1,59 @@
+NWBFile:
+  related_publications:
+    - "doi:10.1101/2025.09.12.675910"
+  keywords:
+    - widefield calcium imaging
+    - decision-making
+    - prior information
+    - autism spectrum disorder
+    - Neurexin1alpha
+    - Nrxn1alpha knockout
+    - cortical dynamics
+    - GCaMP6s
+    - dorsal cortex
+    - synaptic signaling
+  experiment_description: >
+    In dynamic environments, updating beliefs based on past experiences (priors) is essential for
+    optimal decision-making. Prior utilization is often impaired in psychiatric disorders, affecting
+    perception and behavior. We investigate how Neurexin1α (Nrxn1α) loss-of-function disrupts this
+    process, providing insight into circuit deficits underlying sensorimotor dysfunction. While the
+    synaptic role of Nrxn1α is well studied, its impact on network dynamics and decision-making
+    behavior remain unclear. Using widefield calcium imaging, we assess cortex-wide activity in mice
+    performing a two-choice task to probe how priors influence visually-guided decisions. This task
+    requires the mouse to combine sensory evidence with the prior probability over the stimulus side.
+    We find Nrxn1α KO mice underutilized priors and were slower to update choices based on feedback.
+    During decision-making, cortex-wide cortical activity is both elevated and increasingly correlated
+    in Nrxn1α KO mice, independent of task period. Moreover, a larger fraction of cortical variance
+    was explained by movement variables, consistent with stronger coupling of cortical activity to
+    motor signals and a bias toward movement-related dynamics. These findings suggest that core
+    computations underlying decision-making, such as integrating past experience with current evidence,
+    depend on intact synaptic mechanisms shaped by genes like Nrxn1α.
+  experimenter:
+    # Authors from Davatolhagh et al., bioRxiv 2025 (doi:10.1101/2025.09.12.675910)
+    - Davatolhagh, M. Felicia
+    - Couto, João
+    - Melin, Max
+    - Oesch, Lukas T.
+    - Findling, Charles
+    - Morales, Polo
+    - Hong, Isabelle
+    - Churchland, Anne K.
+
+Subject:
+  species: Mus musculus
+  strain: C57BL/6
+  description: >
+    Constitutive Nrxn1α KO mice were obtained from the Fuccillo lab (University of Pennsylvania)
+    and kept on a C57BL/6 background (Geppert et al. 1998). To transgenically express GCaMP6s,
+    Nrxn1α +/- animals were subsequently crossed onto TRE-GCaMP6s (G6s2, JAX 024742) and mice
+    expressing tTA under the control of the alpha isoform of calcium/calmodulin-dependent protein
+    kinase type II alpha chain (CaMKII) promoter (JAX 003010). Offspring were weaned at P21 and
+    separated by sex in cages of 2–5 animals of mixed genotypes. Wild-type littermates were used
+    as controls. Adult male and female mice between the ages of 2–6 months were used for
+    experiments. Mice were housed under a 12-h light/12-h dark reverse light cycle and provided
+    food ad libitum. All mice were housed with enrichment in the form of mouse igloos with
+    fast-tracs (Bio-Serv) and yogurt drops or peanuts. Animals used in experiments had not
+    previously been involved in other experiments or exposed to any drugs. All experiments were
+    conducted in accordance with the National Institute of Health Guidelines for the Use of Animals
+    and approved by the Institutional Animal Care and Use Committee of the University of California
+    at Los Angeles.
