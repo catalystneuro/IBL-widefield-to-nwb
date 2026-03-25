@@ -530,21 +530,21 @@ class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
             output_shape=self.source_image.shape,
             order=0,
             preserve_range=True,
-        ).astype(np.int64)
+        )
         y = warp(
             ccf_anatomical_coordinates_image.y,
             inverse_map=self.landmarks["transform"].inverse,
             output_shape=self.source_image.shape,
             order=0,
             preserve_range=True,
-        ).astype(np.int64)
+        )
         z = warp(
             ccf_anatomical_coordinates_image.z,
             inverse_map=self.landmarks["transform"].inverse,
             output_shape=self.source_image.shape,
             order=0,
             preserve_range=True,
-        ).astype(np.int64)
+        )
 
         # Warp the integer Allen-ID image back into source-image space using the inverse affine.
         # order=0 = nearest-neighbour interpolation, which preserves discrete integer IDs
