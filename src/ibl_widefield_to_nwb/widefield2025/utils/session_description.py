@@ -110,6 +110,19 @@ PROTOCOLS_MAPPING = {
             "Full contrast set: [1.0, 0.25, 0.125, 0.0625, 0.0]. "
         ),
     },
+    "widefieldChoiceWorld": {
+        "protocol_type": "active",
+        "protocol_description": (
+            "Widefield choice world — biasedChoiceWorld configured for sessions with "
+            "simultaneous widefield imaging recordings. Behaviorally identical to biasedChoiceWorld "
+            "but with additional synchronization signals for alignment with neural recordings."
+            "A Gabor patch appears at ±35° azimuth and the mouse turns a wheel to bring it to the center. "
+            "Correct responses earn a water reward (~1.5 µL); incorrect responses trigger white noise and a 2s timeout. "
+            "Stimulus probability alternates between 80/20 and 20/80 blocks (starting with a 50/50 block), "
+            "with block lengths drawn from a truncated exponential distribution (min 20, max 100 trials). "
+            "Full contrast set: [1.0, 0.25, 0.125, 0.0625, 0.0]. "
+        ),
+    },
     "tonotopicMapping": {
         "protocol_type": "passive",
         "protocol_description": (
