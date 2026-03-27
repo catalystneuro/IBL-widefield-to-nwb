@@ -37,7 +37,6 @@ class IblConverter(ConverterPipe):
         assert session_metadata["id"] == self.session, "Session metadata ID does not match the requested session ID."
         (lab_metadata,) = self.one.alyx.rest("labs", "list", name=session_metadata["lab"])
 
-        # TODO: include session_metadata['number'] in the extension attributes
         session_start_time = datetime.fromisoformat(session_metadata["start_time"])
         tzinfo = ZoneInfo(lab_metadata["timezone"])
         session_start_time = session_start_time.replace(tzinfo=tzinfo)
