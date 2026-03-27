@@ -17,10 +17,16 @@ class IblConverter(ConverterPipe):
         one: ONE,
         session: str,
         data_interfaces: list[BaseDataInterface] | dict[str, BaseDataInterface],
+        general_metadata_path: Path | None = None,
         verbose=False,
     ):
         self.one = one
         self.session = session
+        # Dataset-specific general metadata (NWBFile keywords/description/experimenter + Subject
+        # species/strain/description). Falls back to the generic placeholder if not provided.
+        self._general_metadata_path = general_metadata_path or (
+            Path(__file__).parent / "_metadata" / "widefield_general_metadata.yaml"
+        )
         super().__init__(data_interfaces=data_interfaces, verbose=verbose)
 
     def get_metadata_schema(self) -> dict:
@@ -65,8 +71,7 @@ class WidefieldProcessedNWBConverter(IblConverter):
     def get_metadata(self):
         metadata = super().get_metadata()
 
-        widefield_metadata_file_path = Path(__file__).parent / "_metadata" / "widefield_general_metadata.yaml"
-        experiment_metadata = load_dict_from_file(file_path=widefield_metadata_file_path)
+        experiment_metadata = load_dict_from_file(file_path=self._general_metadata_path)
         metadata = dict_deep_update(metadata, experiment_metadata)
 
         # Ensure date_of_birth is a datetime object (Alyx returns it as an ISO string)
@@ -86,8 +91,7 @@ class WidefieldRawNWBConverter(IblConverter):
     def get_metadata(self):
         metadata = super().get_metadata()
 
-        widefield_metadata_file_path = Path(__file__).parent / "_metadata" / "widefield_general_metadata.yaml"
-        experiment_metadata = load_dict_from_file(file_path=widefield_metadata_file_path)
+        experiment_metadata = load_dict_from_file(file_path=self._general_metadata_path)
         metadata = dict_deep_update(metadata, experiment_metadata)
 
         # Ensure date_of_birth is a datetime object (Alyx returns it as an ISO string)

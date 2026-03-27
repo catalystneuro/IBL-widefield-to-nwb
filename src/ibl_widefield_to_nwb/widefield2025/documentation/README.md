@@ -11,6 +11,7 @@ to NWB format. It is intended as a reference for IBL collaborators reviewing the
 | [temporal_alignment.md](temporal_alignment.md) | Synchronization architecture and empirical validation |
 | [raw_nwb.md](raw_nwb.md) | Raw NWB file: widefield frames, DAQ/NIDQ sync, behavior videos |
 | [processed_nwb.md](processed_nwb.md) | Processed NWB file: SVD components, landmarks, behavior |
+| [consistency_checks.md](consistency_checks.md) | Post-conversion consistency checks: usage, check catalogue, how to add new checks |
 | [open_questions.md](open_questions.md) | Open questions for IBL |
 
 ---
