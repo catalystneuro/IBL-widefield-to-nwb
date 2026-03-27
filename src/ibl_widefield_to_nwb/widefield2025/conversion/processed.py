@@ -37,6 +37,7 @@ def convert_processed_session(
     nwbfiles_folder_path: str | Path,
     functional_wavelength_nm: int,
     isosbestic_wavelength_nm: int,
+    general_metadata_path: Path | None = None,
     stub_test: bool = False,
 ) -> Path:
     """
@@ -57,6 +58,9 @@ def convert_processed_session(
         Wavelength (in nm) for the functional imaging data.
     isosbestic_wavelength_nm: int
         Wavelength (in nm) for the isosbestic imaging data.
+    general_metadata_path: Path, optional
+        Path to the dataset-specific general metadata YAML (NWBFile + Subject fields).
+        If None, falls back to the generic ``_metadata/widefield_general_metadata.yaml``.
     stub_test: bool, default: False
         Whether to run a stub test (process a smaller subset of data for testing purposes).
 
@@ -175,7 +179,9 @@ def convert_processed_session(
     # STEP 2: Create converter and write NWB
     # ========================================================================
 
-    converter = WidefieldProcessedNWBConverter(one=one, session=eid, data_interfaces=data_interfaces)
+    converter = WidefieldProcessedNWBConverter(
+        one=one, session=eid, data_interfaces=data_interfaces, general_metadata_path=general_metadata_path
+    )
 
     metadata = converter.get_metadata()
     subject_metadata_for_ndx = metadata.pop("Subject")
