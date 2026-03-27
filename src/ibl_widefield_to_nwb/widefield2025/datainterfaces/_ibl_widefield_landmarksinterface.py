@@ -419,7 +419,14 @@ class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
                 "bregma-centered coordinate system."
             ),
             space=self.ibl_bregma_space,
-            method="<>",  # TODO: write a description of the method used
+            method=(
+                "Per-pixel IBL bregma coordinates (um, RAS: x=ML, y=AP, z=DV) computed from a "
+                "landmark-based affine registration. An affine transform estimated from manually"
+                "annotated landmark correspondences stored in widefieldLandmarks.dorsalCortex.json"
+                "warps the source FOV image into Allen CCF dorsal-cortex atlas space. "
+                "The registered pixel grid is then anchored to physical IBL bregma coordinates "
+                "using iblatlas.atlas.BrainCoordinates, with origin and pixel resolution derived from the landmark file."
+            ),
             image=registered_image,
             localized_entity=imaging_plane,
             x=xyz_um_image[:, :, 0],  # ML_um per pixel
@@ -487,7 +494,14 @@ class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
             name="AnatomicalCoordinatesImageCCFv3",
             description=("Estimated coordinates for each pixel of the registered image in CCFv3 coordinate system."),
             space=self.allen_ccf_space,
-            method="<>",  # TODO: write a description of the method used
+            method=(
+                "Per-pixel Allen CCF v3 coordinates (um, PIR+: x=AP, y=DV, z=ML) derived from the "
+                "per-pixel IBL bregma coordinates of the registered image. The registered pixel grid "
+                "is anchored via iblatlas.atlas.BrainCoordinates using a landmark-based affine "
+                "transform (see AnatomicalCoordinatesImageIBLBregma). IBL bregma coordinates "
+                "(um, RAS) are then converted to Allen CCF v3 (um, PIR+) via "
+                "iblatlas.AllenAtlas.xyz2ccf."
+            ),
             image=registered_image,
             localized_entity=imaging_plane,
             x=ccf_um_image[:, :, 0],  # AP_um per pixel
@@ -563,7 +577,14 @@ class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
             name="AnatomicalCoordinatesCCFv3MappedOnSourceImage",
             description=("Estimated coordinates for each pixel of the source image in CCFv3 coordinate system."),
             space=self.allen_ccf_space,
-            method="<>",  # TODO: write a description of the method used
+            method=(
+                "Per-pixel Allen CCF v3 coordinates (um, PIR+: x=AP, y=DV, z=ML) mapped back onto "
+                "the original source (pre-registration) image. The three CCF coordinate channels "
+                "(AP, DV, ML) from the registered image (see AnatomicalCoordinatesImageCCFv3) are "
+                "each warped into source-image space by applying the inverse of the "
+                "source-to-registered affine transform via skimage.transform.warp with "
+                "nearest-neighbor interpolation (order=0)."
+            ),
             image=self.source_image_object,
             localized_entity=ccf_anatomical_coordinates_image.localized_entity,
             x=x,  # AP_um per pixel
@@ -873,7 +894,11 @@ class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
                 "IBL bregma-centered coordinates of landmarks. Coordinates are in um in the IBL frame "
                 "(RAS: x=ML, y=AP, z=DV)."
             ),
-            method="<>",  # TODO: write a description of the method used
+            method=(
+                "IBL bregma-centered coordinates (um, RAS: x=ML, y=AP, z=DV) of anatomical "
+                "landmarks read directly from widefieldLandmarks.dorsalCortex.json, where they "
+                "are stored as bregma-relative positions in mm."
+            ),
             space=self.ibl_bregma_space,
         )
         ccf_coordinates_table = AnatomicalCoordinatesTable(
@@ -883,7 +908,12 @@ class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
                 "CCF coordinates of landmarks. Coordinates are in the native Allen CCF format with PIR+ "
                 "orientation (x=AP, y=DV, z=ML)."
             ),
-            method="<>",  # TODO: write a description of the method used
+            method=(
+                "Allen CCF v3 coordinates (um, PIR+: x=AP, y=DV, z=ML) of anatomical landmarks "
+                "derived by converting IBL bregma-relative landmark positions (mm, from "
+                "widefieldLandmarks.dorsalCortex.json) to Allen CCF v3 via "
+                "iblatlas.AllenAtlas.xyz2ccf."
+            ),
             space=self.allen_ccf_space,
         )
 
