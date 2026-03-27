@@ -23,7 +23,26 @@ from wfield import allen_load_reference, im_apply_transform, load_allen_landmark
 
 
 class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
-    """Data Interface for storing landmarks from Widefield sessions in NWB."""
+    """Data interface for atlas registration of IBL widefield imaging sessions.
+
+    Reads anatomical landmark annotations from ``widefieldLandmarks.dorsalCortex.json``
+    and the Allen CCF dorsal-cortex reference atlas, then writes the full registration
+    pipeline into an NWB file:
+
+    * **Images** — source FOV mean image, affine-registered FOV image, and the Allen CCF
+      dorsal-cortex atlas projection image.
+    * **Landmarks** — per-landmark pixel correspondences in source, registered, and atlas
+      spaces, plus optional bregma offset and resolution metadata.
+    * **Coordinate tables** — per-landmark 3-D coordinates in IBL bregma space (um, RAS)
+      and Allen CCF v3 space (um, PIR+: AP/DV/ML).
+    * **Coordinate images** — per-pixel 3-D coordinate arrays for the registered image in
+      both IBL bregma and CCF v3 spaces, plus CCF coordinates mapped back onto the source
+      image via the inverse affine transform.
+    * **Brain-region masks** — pixel-level Allen region ID tables for both the registered
+      and source images.
+    * **AtlasRegistration** — top-level container linking all of the above with the affine
+      transformation matrix.
+    """
 
     interface_name = "IblWidefieldLandmarksInterface"
 
@@ -88,8 +107,8 @@ class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
         #                       labels can be mapped to Allen IDs via ccf_regions["label"] → ccf_regions["allen_id"]
         self.ccf_regions, self.atlas_projection, _ = allen_load_reference("dorsal_cortex")
 
-        self.source_image = None  # populated later in _add_registered_images
-        self.registered_image = None  # populated later in _add_registered_images
+        self.source_image: np.ndarray | None = None  # populated later in _add_registered_images
+        self.registered_image = None  # populated later in _add_registered_images; type broadened at assignment
 
         # IBL bregma-centred space: origin = bregma, units = um, orientation = RAS
         #   x = ML (mediolateral, +right), y = AP (anteroposterior, +anterior), z = DV (+dorsal)
@@ -105,20 +124,21 @@ class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
         super().__init__(one=one, session=session)
 
     def _build_landmarks_table(self) -> Landmarks:
-        """
-        Build a fully-populated Landmarks table from raw JSON landmark data.
+        """Build a fully-populated Landmarks table from raw JSON landmark data.
 
-        Parameters
-        ----------
-        landmarks : dict
-            Parsed landmarks dict from ``load_allen_landmarks``.
-        ccf_regions : DataFrame
-            CCF region table from ``allen_load_reference``.
+        Reads landmark correspondences from ``self.landmarks`` (loaded from
+        ``widefieldLandmarks.dorsalCortex.json``) and CCF region metadata from
+        ``self.ccf_regions`` (loaded from the Allen dorsal-cortex reference atlas).
+        Optionally appends ``color``, ``bregma_offset_x/y``, and ``resolution``
+        columns when those keys are present in the JSON file.
 
         Returns
         -------
         Landmarks
-            Fully-populated Landmarks object.
+            Table with one row per landmark containing pixel coordinates in the source
+            image (``source_x/y``), registered image (``registered_x/y``), and atlas
+            projection image (``reference_x/y``), plus the landmark label and any
+            optional metadata columns.
         """
         if "transform" not in self.landmarks:
             raise ValueError("The JSON file must contain a 'transform' key with the transformation matrix.")
@@ -320,8 +340,8 @@ class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
         )
         ophys_module = get_module(nwbfile=nwbfile, name="ophys")
 
-        source_image = ophys_module[summary_images_name][source_image_name]
-        self.source_image = source_image.data[:]  # store source image as a plain numpy array for later use
+        self.source_image_object = ophys_module[summary_images_name][source_image_name]
+        self.source_image = self.source_image_object.data[:]  # store source image as a plain numpy array for later use
 
         # Apply the affine transform to warp the source image into the atlas projection frame.
         # self.landmarks["transform"] is a skimage AffineTransform (source → registered).
@@ -362,39 +382,293 @@ class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
         localization = nwbfile.lab_meta_data["localization"]
         localization.add_spaces([self.ibl_bregma_space, self.allen_ccf_space])  # register both coordinate spaces
 
+    def _build_ibl_bregma_coordinates_image(
+        self,
+        xyz_um_image: np.ndarray,
+        brain_region_acronym_image: np.ndarray,
+        registered_image,
+        imaging_plane,
+    ) -> AnatomicalCoordinatesImage:
+        """Build an ``AnatomicalCoordinatesImageIBLBregma`` from pre-computed per-pixel data.
+
+        Packages per-pixel IBL bregma coordinates into an ``AnatomicalCoordinatesImage``
+        object linked to the registered FOV image.
+
+        Parameters
+        ----------
+        xyz_um_image : np.ndarray
+            Per-pixel IBL bregma coordinates in um, shape ``(H, W, 3)``.
+            Axis order: ``[ML_um, AP_um, DV_um]``.
+        brain_region_acronym_image : np.ndarray
+            Per-pixel Allen region acronym strings, shape ``(H, W)``.
+            Background pixels (outside atlas) are labelled ``"out-of-atlas"``.
+        registered_image : GrayscaleImage
+            NWB image object for the registered FOV; used as the ``image`` link.
+        imaging_plane : ImagingPlane or None
+            Acquisition object to link as ``localized_entity``.
+
+        Returns
+        -------
+        AnatomicalCoordinatesImage
+            ``AnatomicalCoordinatesImageIBLBregma`` populated with ML/AP/DV coordinates.
+        """
+        return AnatomicalCoordinatesImage(
+            name="AnatomicalCoordinatesImageIBLBregma",
+            description=(
+                "Estimated coordinates for each pixel of the registered image in IBL "
+                "bregma-centered coordinate system."
+            ),
+            space=self.ibl_bregma_space,
+            method=(
+                "Per-pixel IBL bregma coordinates (um, RAS: x=ML, y=AP, z=DV) computed from a "
+                "landmark-based affine registration. An affine transform estimated from manually"
+                "annotated landmark correspondences stored in widefieldLandmarks.dorsalCortex.json"
+                "warps the source FOV image into Allen CCF dorsal-cortex atlas space. "
+                "The registered pixel grid is then anchored to physical IBL bregma coordinates "
+                "using iblatlas.atlas.BrainCoordinates, with origin and pixel resolution derived from the landmark file."
+            ),
+            image=registered_image,
+            localized_entity=imaging_plane,
+            x=xyz_um_image[:, :, 0],  # ML_um per pixel
+            y=xyz_um_image[:, :, 1],  # AP_um per pixel
+            z=xyz_um_image[:, :, 2],  # DV_um per pixel (all 0 for dorsal projection)
+            brain_region=brain_region_acronym_image,
+        )
+
+    def _build_ccf_coordinates_image(
+        self,
+        xyz_um: np.ndarray,
+        image_shape: tuple,
+        brain_region_acronym_image: np.ndarray,
+        registered_image,
+        imaging_plane,
+    ) -> AnatomicalCoordinatesImage:
+        """Build an ``AnatomicalCoordinatesImageCCFv3`` from per-pixel IBL bregma coordinates.
+
+        Converts per-pixel IBL bregma coordinates (um, RAS) to Allen CCF v3 coordinates
+        (um, PIR+: AP/DV/ML) via ``iblatlas.AllenAtlas.xyz2ccf`` and packages the result
+        into an ``AnatomicalCoordinatesImage`` linked to the registered FOV image.
+
+        Parameters
+        ----------
+        xyz_um : np.ndarray
+            Per-pixel IBL bregma coordinates in um, flat shape ``(H*W, 3)``.
+            Axis order: ``[ML_um, AP_um, DV_um]``.  The AP axis (column 1) is expected
+            to follow this dataset's convention where positive y = posterior; the sign
+            flip required by ``iblatlas`` is applied internally.
+        image_shape : tuple
+            Spatial shape ``(H, W)`` of the registered image, used to reshape the flat
+            coordinate array back to image space.
+        brain_region_acronym_image : np.ndarray
+            Per-pixel Allen region acronym strings, shape ``(H, W)``.
+            Background pixels (outside atlas) are labelled ``"out-of-atlas"``.
+        registered_image : GrayscaleImage
+            NWB image object for the registered FOV; used as the ``image`` link.
+        imaging_plane : ImagingPlane or None
+            ImagingPlane object to link as ``localized_entity``.
+
+        Returns
+        -------
+        AnatomicalCoordinatesImage
+            ``AnatomicalCoordinatesImageCCFv3`` populated with AP/DV/ML coordinates.
+        """
+        # Convert IBL bregma coords (um) → Allen CCF coords (um) via iblatlas.
+        # atlas.xyz2ccf input: metres, IBL RAS convention.  output: um, axis order = [AP, DV, ML].
+        # NOTE: these per-pixel CCF values are derived from BrainCoordinates→xyz2ccf, so they
+        # should match AnatomicalCoordinatesTableCCFv3 at landmark pixel positions when
+        # warp_origin_coords_um is correct.
+        atlas = AllenAtlas(res_um=10)
+        xyz_m = xyz_um * 1e-6  # um → metres (required by atlas.xyz2ccf)
+
+        # iblatlas.xyz2ccf expects standard RAS convention where y = +anterior.
+        # In this dataset y increases posteriorly, so negate y before converting.
+        xyz_m_for_ccf = xyz_m.copy()
+        xyz_m_for_ccf[:, 1] = -xyz_m_for_ccf[:, 1]
+        ccf_um = atlas.xyz2ccf(xyz=xyz_m_for_ccf, ccf_order="apdvml", mode="clip").astype(np.float64)  # (H*W, 3)
+
+        # Reshape flat array back to a 3-D image (H, W, 3)
+        ccf_um_image = ccf_um.reshape(image_shape[0], image_shape[1], 3)  # (H, W, 3): [AP_um, DV_um, ML_um]
+
+        return AnatomicalCoordinatesImage(
+            name="AnatomicalCoordinatesImageCCFv3",
+            description=("Estimated coordinates for each pixel of the registered image in CCFv3 coordinate system."),
+            space=self.allen_ccf_space,
+            method=(
+                "Per-pixel Allen CCF v3 coordinates (um, PIR+: x=AP, y=DV, z=ML) derived from the "
+                "per-pixel IBL bregma coordinates of the registered image. The registered pixel grid "
+                "is anchored via iblatlas.atlas.BrainCoordinates using a landmark-based affine "
+                "transform (see AnatomicalCoordinatesImageIBLBregma). IBL bregma coordinates "
+                "(um, RAS) are then converted to Allen CCF v3 (um, PIR+) via "
+                "iblatlas.AllenAtlas.xyz2ccf."
+            ),
+            image=registered_image,
+            localized_entity=imaging_plane,
+            x=ccf_um_image[:, :, 0],  # AP_um per pixel
+            y=ccf_um_image[:, :, 1],  # DV_um per pixel
+            z=ccf_um_image[:, :, 2],  # ML_um per pixel
+            brain_region=brain_region_acronym_image,
+        )
+
+    def _map_ccf_coordinates_on_source_image(
+        self, ccf_anatomical_coordinates_image, brain_region_id_image
+    ) -> AnatomicalCoordinatesImage:
+        """Map CCF v3 per-pixel coordinates from registered space back onto the source image.
+
+        Applies the inverse of the source→registered affine transform to each of the
+        three CCF coordinate channels (AP, DV, ML) and to the Allen region-ID image,
+        producing an ``AnatomicalCoordinatesImage`` whose pixels correspond to the
+        original (un-warped) FOV.
+
+        Parameters
+        ----------
+        ccf_anatomical_coordinates_image : AnatomicalCoordinatesImage
+            Per-pixel CCF v3 coordinates in the *registered* image space, as returned
+            by :meth:`_build_ccf_coordinates_image`.  The ``.x``, ``.y``, and ``.z``
+            arrays hold AP_um, DV_um, and ML_um respectively.
+        brain_region_id_image : np.ndarray
+            Integer Allen region-ID image in *registered* space, shape ``(H, W)``.
+            Pixels outside the atlas are 0.
+
+        Returns
+        -------
+        AnatomicalCoordinatesImage
+            ``AnatomicalCoordinatesCCFv3MappedOnSourceImage`` — CCF v3 coordinates
+            (AP/DV/ML in um) and brain-region acronyms for every pixel of the source
+            (pre-registration) image.
+        """
+        x = warp(
+            ccf_anatomical_coordinates_image.x,
+            inverse_map=self.landmarks["transform"].inverse,
+            output_shape=self.source_image.shape,
+            order=0,
+            preserve_range=True,
+        )
+        y = warp(
+            ccf_anatomical_coordinates_image.y,
+            inverse_map=self.landmarks["transform"].inverse,
+            output_shape=self.source_image.shape,
+            order=0,
+            preserve_range=True,
+        )
+        z = warp(
+            ccf_anatomical_coordinates_image.z,
+            inverse_map=self.landmarks["transform"].inverse,
+            output_shape=self.source_image.shape,
+            order=0,
+            preserve_range=True,
+        )
+
+        # Warp the integer Allen-ID image back into source-image space using the inverse affine.
+        # order=0 = nearest-neighbour interpolation, which preserves discrete integer IDs
+        # (higher-order interpolation would blend IDs between regions).
+        source_brain_region_id_image = warp(
+            brain_region_id_image.astype(np.float64),
+            inverse_map=self.landmarks["transform"].inverse,  # inverse of source→registered transform
+            output_shape=self.source_image.shape,
+            order=0,  # nearest-neighbour: no blending of region IDs
+            preserve_range=True,
+        ).astype(np.int64)
+        allen_id_to_acronym = self.ccf_regions.set_index("allen_id")["acronym"].to_dict()
+        source_brain_region_acronym_image = np.vectorize(allen_id_to_acronym.get)(source_brain_region_id_image)
+        source_brain_region_acronym_image[source_brain_region_id_image == 0] = "out-of-atlas"
+
+        return AnatomicalCoordinatesImage(
+            name="AnatomicalCoordinatesCCFv3MappedOnSourceImage",
+            description=("Estimated coordinates for each pixel of the source image in CCFv3 coordinate system."),
+            space=self.allen_ccf_space,
+            method=(
+                "Per-pixel Allen CCF v3 coordinates (um, PIR+: x=AP, y=DV, z=ML) mapped back onto "
+                "the original source (pre-registration) image. The three CCF coordinate channels "
+                "(AP, DV, ML) from the registered image (see AnatomicalCoordinatesImageCCFv3) are "
+                "each warped into source-image space by applying the inverse of the "
+                "source-to-registered affine transform via skimage.transform.warp with "
+                "nearest-neighbor interpolation (order=0)."
+            ),
+            image=self.source_image_object,
+            localized_entity=ccf_anatomical_coordinates_image.localized_entity,
+            x=x,  # AP_um per pixel
+            y=y,  # DV_um per pixel
+            z=z,  # ML_um per pixel
+            brain_region=source_brain_region_acronym_image,
+        )
+
+    def _ensure_imaging_plane_exists(self, nwbfile: NWBFile):
+        """Retrieve the ImagingPlane object from the NWB file.
+
+        Parameters
+        ----------
+        nwbfile : NWBFile
+            The NWB file to search.
+
+        Returns
+        -------
+        ImagingPalne
+            The imaging plane.
+
+        Raises
+        ------
+        ValueError
+            If ImagingPlane does not exist.
+        """
+        if "ImagingPlaneCalcium" not in nwbfile.imaging_planes:
+            raise ValueError(
+                f"The ImagingPlaneCalcium doesn't exist. "
+                f"Populate the ImagingPlaneCalcium first "
+                "(e.g. via WidefieldImagingInterface in the raw pipeline or via WidefieldSVDInterface in the processed pipeline ) "
+                "before running the anatomical localization interface."
+            )
+        return nwbfile.imaging_planes[f"ImagingPlaneCalcium"]
+
     def _build_anatomical_coordinates_image(
         self,
         nwbfile: NWBFile,
         landmarks: Landmarks,
     ) -> tuple:
-        """Compute per-pixel IBL bregma coordinates and build an AnatomicalCoordinatesImage.
+        """Compute per-pixel coordinates and build ``AnatomicalCoordinatesImage`` objects.
 
-        Uses ``BrainCoordinates`` transforms to convert every pixel in the registered
-        image to a physical (x, y, z) position in the IBL bregma space, looks up
-        the corresponding Allen atlas region label, and packages everything into an
-        ``AnatomicalCoordinatesImage``.
+        This is the main orchestrator for per-pixel coordinate computation.  It performs
+        shared setup (coordinate-system anchoring, pixel-grid construction, atlas region
+        lookup) and then delegates to two private helpers:
+
+        * :meth:`_build_ibl_bregma_coordinates_image` — builds
+          ``AnatomicalCoordinatesImageIBLBregma`` using IBL bregma coordinates (um, RAS).
+        * :meth:`_build_ccf_coordinates_image` — converts those coordinates to Allen CCF
+          v3 (um, PIR+) and builds ``AnatomicalCoordinatesImageCCFv3``.
 
         Parameters
         ----------
         nwbfile : NWBFile
-            The NWB file containing the registered image and atlas projection in the ophys module.
+            The NWB file containing the registered image and atlas projection in the
+            ophys module.
         landmarks : Landmarks
-            The Landmarks table containing the landmark correspondences and resolution information.
+            The Landmarks table containing landmark correspondences and per-pixel
+            resolution information.
 
         Returns
         -------
-        tuple[AnatomicalCoordinatesImage, np.ndarray]
-            ``(anatomical_coordinates_image, brain_region_id_image)``
-            where ``brain_region_id_image`` contains Allen IDs per pixel (0 = outside atlas).
+        tuple[AnatomicalCoordinatesImage, AnatomicalCoordinatesImage, np.ndarray]
+            ``(ibl_anatomical_coordinates_image, ccf_anatomical_coordinates_image,
+            brain_region_id_image)`` where ``brain_region_id_image`` contains integer
+            Allen IDs per pixel (0 = outside atlas) and is used downstream by
+            :meth:`_build_brain_region_masks`.
         """
-        # Index of the landmark used to anchor pixel coords to physical coords in both image spaces.
+
+        assert (
+            self.registered_image is not None
+        ), "registered_image is None — call _add_registered_images before _build_anatomical_coordinates_image."
+
+        # -----------------------------------------------------------------------
+        # Shared setup — coordinate anchoring and pixel-to-physical mapping
+        # -----------------------------------------------------------------------
+
+        # Index of the landmark used to anchor pixel coords to physical coords.
         # NOTE: hardcoded as 1 — verify this is the correct anchor (ideally bregma, i.e. x=0,y=0 mm).
         reference_landmark_index = 1
 
         # Pixel [x, y] of the anchor landmark in the REGISTERED image (from landmarks_im)
         warp_coords_px = landmarks[:][["registered_x", "registered_y"]].values[reference_landmark_index]
 
-        # Pixel [x, y] of the anchor landmark in the ATLAS PROJECTION image (from reference_x/y built in _build_landmarks_table)
+        # Pixel [x, y] of the anchor landmark in the ATLAS PROJECTION image
         reference_coords_px = landmarks[:][["reference_x", "reference_y"]].values[reference_landmark_index]
 
         # Resolution of the registered/source image in um/pixel (stored in the landmarks table)
@@ -467,37 +741,27 @@ class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
         zeros = np.zeros((coords_flat.shape[0], 1), dtype=coords_flat.dtype)
         coords_flat = np.hstack((coords_flat, zeros))  # shape (H*W, 3)
 
-        # Convert every registered-image pixel → physical IBL bregma coords in um
+        # Convert every registered-image pixel → physical IBL bregma coords in um.
         # xyz_um shape: (H*W, 3), columns: [ML_um, AP_um, DV_um]
         xyz_um = brain_coordinates_warp.i2xyz(coords_flat)
 
+        # -----------------------------------------------------------------------
+        # Shared atlas region lookup — used by both coordinate images
+        # -----------------------------------------------------------------------
+
         # For each registered-image pixel, find the corresponding atlas-projection pixel.
         # mode="clip" clamps out-of-bounds queries to the image edge instead of raising an error.
-        # NOTE: this lookup is only spatially correct when both BrainCoordinates share the same physical frame.
+        # NOTE: this lookup is only spatially correct when both BrainCoordinates share the same
+        # physical frame.
         ref_idx = brain_coordinates_reference.xyz2i(xyz_um, mode="clip")  # shape (H*W, 3): [col, row, z] in atlas
-
-        # Convert IBL bregma coords (um) → Allen CCF coords (um) via iblatlas.
-        # xyz2ccf input: metres, IBL RAS convention.  output: um, axis order = [AP, DV, ML].
-        # NOTE: this is the same conversion used in _build_landmark_coordinate_tables,
-        # so the per-pixel CCF values should match the per-landmark CCF table values
-        # at the landmark pixel locations — if warp_origin_coords_um is correct.
-        atlas = AllenAtlas(res_um=10)
-        xyz_m = xyz_um * 1e-6  # um → metres (required by atlas.xyz2ccf)
-        # iblatlas.xyz2ccf expects RAS convention (y = +anterior).
-        # In this dataset y increases posteriorly, so negate y before converting.
-        xyz_m_for_ccf = xyz_m.copy()
-        xyz_m_for_ccf[:, 1] = -xyz_m_for_ccf[:, 1]
-        ccf_um = atlas.xyz2ccf(xyz=xyz_m_for_ccf, ccf_order="apdvml", mode="clip").astype(np.float64)  # shape (H*W, 3)
 
         # Look up the atlas region label at each atlas-projection pixel.
         # ref_idx[:,0] = column (x), ref_idx[:,1] = row (y) in atlas_projection.
         # atlas_projection values are integer region labels (not Allen IDs yet).
         regions = self.atlas_projection[ref_idx[:, 1], ref_idx[:, 0]]  # shape (H*W,)
 
-        # Reshape flat arrays back to 2-D / 3-D image shapes
+        # Reshape to 2-D image space
         regions_image = regions.reshape(self.registered_image.shape[0], self.registered_image.shape[1])  # (H, W)
-        xyz_um_image = xyz_um.reshape(self.registered_image.shape[0], self.registered_image.shape[1], 3)  # (H, W, 3)
-        ccf_um_image = ccf_um.reshape(self.registered_image.shape[0], self.registered_image.shape[1], 3)  # (H, W, 3)
 
         # Build lookup: atlas label → Allen structure ID and acronym
         label_to_allen_id = self.ccf_regions.set_index("label")["allen_id"].to_dict()
@@ -515,121 +779,136 @@ class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
         )  # maps each pixel label → acronym string
         brain_region_acronym_image[outside_mask] = "out-of-atlas"
 
-        registered_image = nwbfile.processing["ophys"]["Images"]["RegisteredImage"]  # link to the NWB image object
+        # Shared NWB references used by both coordinate images
+        registered_image = nwbfile.processing["ophys"]["Images"]["RegisteredImage"]
 
-        one_photon_series = None
-        # Processed data doesn't have raw one photon series data.
-        if "OnePhotonSeriesCalcium" in nwbfile.acquisition:
-            one_photon_series = nwbfile.acquisition["OnePhotonSeriesCalcium"]
+        imaging_plane = self._ensure_imaging_plane_exists(nwbfile=nwbfile)
 
-        # Per-pixel IBL bregma coordinates (um) for the registered image
-        ibl_anatomical_coordinates_image = AnatomicalCoordinatesImage(
-            name="AnatomicalCoordinatesImageIBLBregma",
-            description="Estimated coordinates for each pixel of the registered image in IBL bregma-centered coordinate system.",
-            space=self.ibl_bregma_space,
-            method="IBL manual annotation",  # TODO: confirm method description
-            image=registered_image,
-            localized_entity=one_photon_series,  # link to the source of the coordinates
-            x=xyz_um_image[:, :, 0],  # ML_um per pixel
-            y=xyz_um_image[:, :, 1],  # AP_um per pixel
-            z=xyz_um_image[:, :, 2],  # DV_um per pixel (all 0 for dorsal projection)
-            brain_region=brain_region_acronym_image,
+        # -----------------------------------------------------------------------
+        # Section 1: per-pixel IBL bregma coordinates → AnatomicalCoordinatesImageIBLBregma
+        # -----------------------------------------------------------------------
+
+        # Reshape flat xyz_um to image shape before passing to the helper
+        xyz_um_image = xyz_um.reshape(
+            self.registered_image.shape[0], self.registered_image.shape[1], 3
+        )  # (H, W, 3): [ML_um, AP_um, DV_um]
+
+        ibl_anatomical_coordinates_image = self._build_ibl_bregma_coordinates_image(
+            xyz_um_image=xyz_um_image,
+            brain_region_acronym_image=brain_region_acronym_image,
+            registered_image=registered_image,
+            imaging_plane=imaging_plane,
         )
 
-        # Per-pixel Allen CCF coordinates (um, AP/DV/ML) for the registered image.
-        # NOTE: ccf_um_image is derived from xyz_um → xyz_m → atlas.xyz2ccf.
-        # It should match AnatomicalCoordinatesTableCCFv3 at landmark pixel positions
-        # unless warp_origin_coords_um (or reference_origin_coords_um) is wrong.
-        ccf_anatomical_coordinates_image = AnatomicalCoordinatesImage(
-            name="AnatomicalCoordinatesImageCCFv3",
-            description="Estimated coordinates for each pixel of the registered image in CCFv3 coordinate system.",
-            space=self.allen_ccf_space,
-            method="IBL manual annotation",  # TODO: confirm method description
-            image=registered_image,
-            localized_entity=one_photon_series,  # link to the source of the coordinates
-            x=ccf_um_image[:, :, 0],  # AP_um per pixel
-            y=ccf_um_image[:, :, 1],  # DV_um per pixel
-            z=ccf_um_image[:, :, 2],  # ML_um per pixel
-            brain_region=brain_region_acronym_image,
+        # -----------------------------------------------------------------------
+        # Section 2: per-pixel Allen CCF v3 coordinates → AnatomicalCoordinatesImageCCFv3
+        # -----------------------------------------------------------------------
+
+        ccf_anatomical_coordinates_image = self._build_ccf_coordinates_image(
+            xyz_um=xyz_um,
+            image_shape=self.registered_image.shape,
+            brain_region_acronym_image=brain_region_acronym_image,
+            registered_image=registered_image,
+            imaging_plane=imaging_plane,
         )
-        return ibl_anatomical_coordinates_image, ccf_anatomical_coordinates_image, brain_region_id_image
 
-    def _build_brain_region_masks(
-        self,
-        brain_region_id_image: np.ndarray,
-    ) -> tuple:
-        """Build BrainRegionMasks for the registered image and the source image.
+        # -----------------------------------------------------------------------
+        # Section 3: map Allen CCF v3 coordinates on source image → AnatomicalCoordinatesImageCCFv3
+        # -----------------------------------------------------------------------
 
-        Constructs pixel-level brain-region mask tables in both spaces. The
-        source-space masks are obtained by warping the registered-space label
-        image back through the inverse affine transform.
-
-        Parameters
-        ----------
-        brain_region_id_image : np.ndarray
-            Per-pixel Allen IDs in registered space (0 = outside atlas).
-
-        Returns
-        -------
-        tuple[BrainRegionMasks, BrainRegionMasks]
-            ``(registered_masks, source_masks)``
-        """
-        # Find all non-zero (in-atlas) pixels in the registered image
-        ys, xs = brain_region_id_image.nonzero()
-        registered_masks = BrainRegionMasks(
-            name="RegisteredImageBrainRegionMasksIBLBregma",
-            description="Brain region masks for each pixel in the registered image based on the atlas projection.",
+        ccf_anatomical_coordinates_mapped_on_source_image = self._map_ccf_coordinates_on_source_image(
+            ccf_anatomical_coordinates_image, brain_region_id_image
         )
-        for y, x in zip(ys, xs):
-            registered_masks.add_row(
-                x=int(x), y=int(y), brain_region_id=int(brain_region_id_image[y, x]), check_ragged=False
-            )
-
-        # Warp the integer Allen-ID image back into source-image space using the inverse affine.
-        # order=0 = nearest-neighbour interpolation, which preserves discrete integer IDs
-        # (higher-order interpolation would blend IDs between regions).
-        source_brain_region_id_image = warp(
-            brain_region_id_image.astype(np.float64),
-            inverse_map=self.landmarks["transform"].inverse,  # inverse of source→registered transform
-            output_shape=self.source_image.shape,
-            order=0,  # nearest-neighbour: no blending of region IDs
-            preserve_range=True,
-        ).astype(np.int64)
-
-        ys_src, xs_src = (source_brain_region_id_image != 0).nonzero()  # non-zero = in-atlas pixels in source space
-        source_masks = BrainRegionMasks(
-            name="SourceImageBrainRegionMasksIBLBregma",
-            description="Brain region masks for each pixel in the source image, warped back from registered space via inverse transform.",
+        return (
+            ibl_anatomical_coordinates_image,
+            ccf_anatomical_coordinates_image,
+            ccf_anatomical_coordinates_mapped_on_source_image,
+            brain_region_id_image,
         )
-        for y, x in zip(ys_src, xs_src):
-            source_masks.add_row(
-                x=int(x), y=int(y), brain_region_id=int(source_brain_region_id_image[y, x]), check_ragged=False
-            )
 
-        return registered_masks, source_masks
+    # def _build_brain_region_masks(
+    #     self,
+    #     brain_region_id_image: np.ndarray,
+    # ) -> tuple:
+    #     """Build BrainRegionMasks for the registered image and the source image.
+
+    #     Constructs pixel-level brain-region mask tables in both spaces. The
+    #     source-space masks are obtained by warping the registered-space label
+    #     image back through the inverse affine transform.
+
+    #     Parameters
+    #     ----------
+    #     brain_region_id_image : np.ndarray
+    #         Per-pixel Allen IDs in registered space (0 = outside atlas).
+
+    #     Returns
+    #     -------
+    #     tuple[BrainRegionMasks, BrainRegionMasks]
+    #         ``(registered_masks, source_masks)``
+    #     """
+    #     # Find all non-zero (in-atlas) pixels in the registered image
+    #     ys, xs = brain_region_id_image.nonzero()
+    #     registered_masks = BrainRegionMasks(
+    #         name="BrainRegionMasksRegisteredImage",
+    #         description="Brain region masks for each pixel in the registered image based on the atlas projection.",
+    #     )
+    #     for y, x in zip(ys, xs):
+    #         registered_masks.add_row(
+    #             x=int(x), y=int(y), brain_region_id=int(brain_region_id_image[y, x]), check_ragged=False
+    #         )
+
+    #     # Warp the integer Allen-ID image back into source-image space using the inverse affine.
+    #     # order=0 = nearest-neighbour interpolation, which preserves discrete integer IDs
+    #     # (higher-order interpolation would blend IDs between regions).
+    #     source_brain_region_id_image = warp(
+    #         brain_region_id_image.astype(np.float64),
+    #         inverse_map=self.landmarks["transform"].inverse,  # inverse of source→registered transform
+    #         output_shape=self.source_image.shape,
+    #         order=0,  # nearest-neighbour: no blending of region IDs
+    #         preserve_range=True,
+    #     ).astype(np.int64)
+
+    #     ys_src, xs_src = (source_brain_region_id_image != 0).nonzero()  # non-zero = in-atlas pixels in source space
+    #     source_masks = BrainRegionMasks(
+    #         name="BrainRegionMasksSourceImage",
+    #         description="Brain region masks for each pixel in the source image, warped back from registered space via inverse transform.",
+    #     )
+    #     for y, x in zip(ys_src, xs_src):
+    #         source_masks.add_row(
+    #             x=int(x), y=int(y), brain_region_id=int(source_brain_region_id_image[y, x]), check_ragged=False
+    #         )
+
+    #     return registered_masks, source_masks
 
     def _build_landmark_coordinate_tables(
         self,
         landmarks: Landmarks,
     ) -> tuple:
-        """Build AnatomicalCoordinatesTables in IBL bregma space and CCF space.
+        """Build AnatomicalCoordinatesTables for landmarks in IBL bregma and CCF v3 spaces.
+
+        Converts the bregma-relative landmark coordinates stored in
+        ``self.landmarks["landmarks"]`` (mm, RAS) to physical units and populates
+        two ``AnatomicalCoordinatesTable`` objects: one in IBL bregma space (um, RAS:
+        x=ML, y=AP, z=DV) and one in Allen CCF v3 space (um, PIR+: x=AP, y=DV, z=ML).
 
         Parameters
         ----------
         landmarks : Landmarks
-            The Landmarks table to which these coordinate rows will refer.
-        ibl_bregma_space : Space
-            The IBL bregma coordinate space object.
-        ccf_space : AllenCCFv3Space
-            The Allen CCF v3 coordinate space object.
-        allen_landmarks : dict
-            Parsed landmarks dict; ``allen_landmarks["landmarks"]`` contains mm
-            bregma-relative coordinates for each landmark.
+            The Landmarks table to which the coordinate rows are linked via
+            ``localized_entity`` indices.
 
         Returns
         -------
         tuple[AnatomicalCoordinatesTable, AnatomicalCoordinatesTable]
             ``(ibl_bregma_table, ccf_table)``
+
+        Notes
+        -----
+        Coordinate spaces (``self.ibl_bregma_space``, ``self.allen_ccf_space``) and the
+        raw landmark positions (``self.landmarks["landmarks"]`` in mm bregma-relative)
+        are read from instance attributes populated during ``__init__``.
+        The ``iblatlas`` sign convention requires negating the AP axis (y) before
+        calling ``atlas.xyz2ccf`` because this dataset treats posterior as positive y.
         """
         ibl_bregma_coordinates_table = AnatomicalCoordinatesTable(
             name="AnatomicalCoordinatesIBLBregma",
@@ -638,7 +917,11 @@ class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
                 "IBL bregma-centered coordinates of landmarks. Coordinates are in um in the IBL frame "
                 "(RAS: x=ML, y=AP, z=DV)."
             ),
-            method="IBL manual annotation",
+            method=(
+                "IBL bregma-centered coordinates (um, RAS: x=ML, y=AP, z=DV) of anatomical "
+                "landmarks read directly from widefieldLandmarks.dorsalCortex.json, where they "
+                "are stored as bregma-relative positions in mm."
+            ),
             space=self.ibl_bregma_space,
         )
         ccf_coordinates_table = AnatomicalCoordinatesTable(
@@ -648,7 +931,12 @@ class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
                 "CCF coordinates of landmarks. Coordinates are in the native Allen CCF format with PIR+ "
                 "orientation (x=AP, y=DV, z=ML)."
             ),
-            method="IBL manual annotation",
+            method=(
+                "Allen CCF v3 coordinates (um, PIR+: x=AP, y=DV, z=ML) of anatomical landmarks "
+                "derived by converting IBL bregma-relative landmark positions (mm, from "
+                "widefieldLandmarks.dorsalCortex.json) to Allen CCF v3 via "
+                "iblatlas.AllenAtlas.xyz2ccf."
+            ),
             space=self.allen_ccf_space,
         )
 
@@ -699,19 +987,36 @@ class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
         summary_images_name: str,
         source_image_name: str,
     ):
-        """Add landmarks data to the NWB file.
+        """Orchestrate the full atlas registration pipeline and write results to the NWB file.
 
-        Loads landmarks from JSON file, applies transformation to source image,
-        and stores transformed image and landmarks in NWB file.
+        Executes the following steps in order:
+
+        1. Build the ``Landmarks`` table from the JSON file.
+        2. Ensure the source image exists in the ophys module (loading it from the
+           frame-average file if absent) and apply the affine transform to produce the
+           registered FOV image and atlas projection image.
+        3. Register IBL bregma and Allen CCF v3 coordinate spaces in a ``Localization``
+           container.
+        4. Compute per-pixel ``AnatomicalCoordinatesImage`` objects in IBL bregma space,
+           CCF v3 space (registered image), and CCF v3 space mapped back onto the source
+           image.
+        5. Assemble an ``AtlasRegistration`` linking the source image, registered image,
+           atlas projection, affine matrix, and landmarks.
+        6. Build per-landmark ``AnatomicalCoordinatesTable`` objects in IBL bregma and
+           CCF v3 spaces and add them to the ``Localization`` container.
+        (7. Build pixel-level ``BrainRegionMasks`` for both the registered and source images.)
 
         Parameters
         ----------
         nwbfile : NWBFile
-            The NWB file to which the landmarks will be added.
+            Target NWB file.
         summary_images_name : str
-            Name of the container in the NWB file that holds the summary images.
+            Name of the ``Images`` container in the ophys module that holds the source
+            image (e.g. ``"Images"`` for processed data or a channel-specific name for
+            raw data).
         source_image_name : str
-            Name of the source image within the summary images container.
+            Name of the source (mean) image within that container
+            (e.g. ``"MeanImage"`` or ``"MeanImageCalcium"``).
         """
 
         # Build Landmarks table
@@ -729,19 +1034,26 @@ class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
         localization = nwbfile.lab_meta_data["localization"]
 
         # Build AnatomicalCoordinatesImage + raw brain_region_id array
-        ibl_anatomical_coordinates_image, ccf_anatomical_coordinates_image, brain_region_id_image = (
-            self._build_anatomical_coordinates_image(
-                nwbfile=nwbfile,
-                landmarks=landmarks,
-            )
+        (
+            ibl_anatomical_coordinates_image,
+            ccf_anatomical_coordinates_image,
+            ccf_anatomical_coordinates_mapped_on_source_image,
+            _,
+        ) = self._build_anatomical_coordinates_image(
+            nwbfile=nwbfile,
+            landmarks=landmarks,
         )
         localization.add_anatomical_coordinates_images(
-            [ibl_anatomical_coordinates_image, ccf_anatomical_coordinates_image]
+            [
+                ibl_anatomical_coordinates_image,
+                ccf_anatomical_coordinates_image,
+                ccf_anatomical_coordinates_mapped_on_source_image,
+            ]
         )
 
         # Build BrainRegionMasks for registered and source spaces
-        registered_masks, source_masks = self._build_brain_region_masks(brain_region_id_image=brain_region_id_image)
-        localization.add_brain_region_masks([registered_masks, source_masks])
+        # registered_masks, source_masks = self._build_brain_region_masks(brain_region_id_image=brain_region_id_image)
+        # localization.add_brain_region_masks([registered_masks, source_masks])
 
         # Assemble AtlasRegistration
         # Now that all linked objects exist (AnatomicalCoordinatesImage +

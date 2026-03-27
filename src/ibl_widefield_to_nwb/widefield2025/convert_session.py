@@ -86,7 +86,7 @@ def session_to_nwb(
 if __name__ == "__main__":
 
     # Parameters for conversion
-    output_dir_path = Path("/Volumes/T9/data/IBL/nwbfiles")
+    output_dir_path = Path("E:/IBL-widefield-nwbfiles")
 
     functional_wavelength_nm = 470  # The wavelength for functional imaging (e.g. 470 nm)
     isosbestic_wavelength_nm = 405  # The wavelength for isosbestic imaging (e.g. 405 nm)
@@ -99,6 +99,7 @@ if __name__ == "__main__":
     one = ONE()
     # eid = "d34a502f-bd06-471f-8334-df41f785e1d9" error 404 for raw data
     eid = "2864dca1-38d8-464c-9777-f6fdfd5e63b5"
+    general_metadata_file_path = Path(__file__).parent / "_metadata" / "widefield_general_metadata_CSK.yaml"
 
     mode = "processed"  # Choose between "raw" or "processed" mode
 
@@ -109,5 +110,6 @@ if __name__ == "__main__":
         mode=mode,
         functional_wavelength_nm=functional_wavelength_nm,
         isosbestic_wavelength_nm=isosbestic_wavelength_nm,
+        general_metadata_path=general_metadata_file_path,
         stub_test=stub_test,
     )

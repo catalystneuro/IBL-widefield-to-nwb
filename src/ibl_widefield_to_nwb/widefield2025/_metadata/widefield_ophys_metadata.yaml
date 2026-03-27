@@ -5,23 +5,23 @@ Ophys:
   ImagingPlane:
     - name: ImagingPlaneCalcium
       description: The imaging plane for calcium imaging from Blue light excitation.
-      excitation_lambda: 470.0  # in nm
-      location: unknown # TODO
+      excitation_lambda: 470.0 # in nm
+      location: Whole Brain
       indicator: GCaMP6f # Maybe this was only for Mesoscope and not for Widefield
       optical_channel:
         - name: OpticalChannel
-          emission_lambda: 510.0  # in nm (peak emission wavelength)  # TODO
+          emission_lambda: 510.0 # in nm (peak emission wavelength)  # TODO
           description: GCaMP Ca2+ bound emission (calcium signal). (Thorlabs, cat. no. M470L4)
       device: WidefieldMicroscope
     - name: ImagingPlaneIsosbestic
       description: The imaging plane for calcium imaging from Violet light excitation.
       excitation_lambda: 405.0 # in nm
-      location: unknown # TODO
+      location: Whole Brain
       indicator: GCaMP6f
       optical_channel:
         - name: OpticalChannel
-          emission_lambda: 510.0  # in nm (peak emission wavelength)  # TODO
-          description:  GCaMP Ca2+ independent emission (isosbestic signal). (Thorlabs, cat. no. M405L4)
+          emission_lambda: 510.0 # in nm (peak emission wavelength)  # TODO
+          description: GCaMP Ca2+ independent emission (isosbestic signal). (Thorlabs, cat. no. M405L4)
       device: WidefieldMicroscope
   OnePhotonSeries:
     - name: OnePhotonSeriesCalcium
