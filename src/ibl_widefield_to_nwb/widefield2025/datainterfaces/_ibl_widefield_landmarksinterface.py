@@ -465,8 +465,7 @@ class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
         registered_image : GrayscaleImage
             NWB image object for the registered FOV; used as the ``image`` link.
         imaging_plane : ImagingPlane or None
-            Acquisition object to link as ``localized_entity``.
-            ``None`` when no raw one-photon series is present (processed-data pipeline).
+            ImagingPlane object to link as ``localized_entity``.
 
         Returns
         -------
@@ -592,6 +591,33 @@ class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
             z=z,  # ML_um per pixel
             brain_region=source_brain_region_acronym_image,
         )
+
+    def _ensure_imaging_plane_exists(self, nwbfile: NWBFile):
+        """Retrieve the ImagingPlane object from the NWB file.
+
+        Parameters
+        ----------
+        nwbfile : NWBFile
+            The NWB file to search.
+
+        Returns
+        -------
+        ImagingPalne
+            The imaging plane.
+
+        Raises
+        ------
+        ValueError
+            If ImagingPlane does not exist.
+        """
+        if "ImagingPlaneCalcium" not in nwbfile.imaging_planes:
+            raise ValueError(
+                f"The ImagingPlaneCalcium doesn't exist. "
+                f"Populate the ImagingPlaneCalcium first "
+                "(e.g. via WidefieldImagingInterface in the raw pipeline or via WidefieldSVDInterface in the processed pipeline ) "
+                "before running the anatomical localization interface."
+            )
+        return nwbfile.imaging_planes[f"ImagingPlaneCalcium"]
 
     def _build_anatomical_coordinates_image(
         self,
@@ -756,10 +782,7 @@ class IblWidefieldLandmarksInterface(BaseIBLDataInterface):
         # Shared NWB references used by both coordinate images
         registered_image = nwbfile.processing["ophys"]["Images"]["RegisteredImage"]
 
-        imaging_plane = None
-        # Processed data doesn't have raw one photon series data.
-        if "ImagingPlaneCalcium" in nwbfile.imaging_planes:
-            imaging_plane = nwbfile.imaging_planes["ImagingPlaneCalcium"]
+        imaging_plane = self._ensure_imaging_plane_exists(nwbfile=nwbfile)
 
         # -----------------------------------------------------------------------
         # Section 1: per-pixel IBL bregma coordinates → AnatomicalCoordinatesImageIBLBregma
