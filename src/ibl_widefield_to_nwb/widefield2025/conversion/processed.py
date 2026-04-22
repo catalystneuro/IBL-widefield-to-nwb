@@ -116,8 +116,10 @@ def convert_processed_session(
     )
 
     # Add landmarks
-    data_interfaces["Landmarks"] = IblWidefieldLandmarksInterface(**interface_kwargs)
-    conversion_options["Landmarks"] = dict()
+    if IblWidefieldLandmarksInterface.check_availability(one, eid)["available"]:
+        IblWidefieldLandmarksInterface.download_data(one, eid, download_only=True)
+        data_interfaces["Landmarks"] = IblWidefieldLandmarksInterface(one=one, session=eid)
+        conversion_options["Landmarks"] = dict()
 
     # ========================================================================
     # Behavior interfaces
