@@ -50,12 +50,7 @@ STUB_TEST = False  # Set True for a quick sanity check (writes only ~100 frames)
 
 # Dataset-specific metadata: publication, authors, species/strain/housing from the manuscript.
 GENERAL_METADATA_PATH = (
-    Path(__file__).parent.parent
-    / "src"
-    / "ibl_widefield_to_nwb"
-    / "widefield2025"
-    / "_metadata"
-    / "widefield_general_metadata_FD.yaml"
+    Path(__file__).parent.parent / "widefield2025" / "_metadata" / "widefield_general_metadata_FD.yaml"
 )
 
 # =============================================================================
