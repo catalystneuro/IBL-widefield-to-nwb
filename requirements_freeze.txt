@@ -106,7 +106,7 @@ more-itertools==10.8.0
 mtscomp==1.0.2
 multidict==6.6.4
 natsort==8.4.0
-ndx-anatomical-localization @ git+https://github.com/catalystneuro/ndx-anatomical-localization.git@make_image_optional
+ndx-anatomical-localization @ git+https://github.com/catalystneuro/ndx-anatomical-localization.git@main
 ndx-events==0.2.1
 -e git+ssh://git@github.com/catalystneuro/ndx-ibl.git@231169415fb15287bfeaac7622758f4ac9bbee88#egg=ndx_ibl
 ndx-ibl-bwm @ git+https://github.com/int-brain-lab/ndx-ibl-bwm.git@fd8c45db9b5a693a9af42cd45745438f17f32d37
