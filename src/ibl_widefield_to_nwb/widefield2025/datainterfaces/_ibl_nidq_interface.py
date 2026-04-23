@@ -89,6 +89,7 @@ class IblNIDQInterface(SpikeGLXNIDQInterface, BaseIBLDataInterface):
         session_path = one.eid2path(session)
         source_folder = session_path / self.COLLECTION
         target_folder = source_folder / "decompressed"
+        target_folder.mkdir(parents=True, exist_ok=True)
         decompress_ephys_cbins(source_folder=source_folder, target_folder=target_folder)
         self._reencode_meta_files_to_utf8(target_folder)
 

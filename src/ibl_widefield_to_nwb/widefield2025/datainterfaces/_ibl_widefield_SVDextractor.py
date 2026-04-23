@@ -108,7 +108,10 @@ class WidefieldSVDExtractor(SegmentationExtractor):
             1-D array of frame indices.
         """
         light_sources = self._load_imaging_light_source()
-        frame_indices = np.where(light_sources == self.channel_id)[0]
+        all_times = self._load_times()
+        # Robust for cases when times from imaging.imagingLightSource are longer than available from imaging times
+        n_samples = min(len(all_times), len(light_sources))
+        frame_indices = np.where(light_sources[:n_samples] == self.channel_id)[0]
         return frame_indices
 
     def get_accepted_list(self) -> list:

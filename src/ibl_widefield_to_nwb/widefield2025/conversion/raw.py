@@ -159,10 +159,6 @@ def convert_raw_session(
     else:
         print(f"No NIDQ sync data available for session '{eid}', skipping.")
 
-    # Add landmarks
-    data_interfaces["Landmarks"] = IblWidefieldLandmarksInterface(one=one, session=eid)
-    conversion_options["Landmarks"] = dict()
-
     # Add raw behavioral video
     for camera_view in ["left", "right", "body"]:
         has_timestamps = bool(one.list_datasets(eid=eid, filename=f"*{camera_view}Camera.times*"))
@@ -205,6 +201,7 @@ def convert_raw_session(
 
     # Add Landmarks
     if IblWidefieldLandmarksInterface.check_availability(one=one, eid=eid)["available"]:
+        IblWidefieldLandmarksInterface.download_data(one=one, eid=eid, download_only=True)
         data_interfaces["Landmarks"] = IblWidefieldLandmarksInterface(one=one, session=eid)
         conversion_options.update(dict(Landmarks=dict()))
 
