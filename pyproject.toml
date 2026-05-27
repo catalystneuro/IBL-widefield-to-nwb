@@ -15,7 +15,7 @@ classifiers = [
 ]
 
 dependencies = [
-  "neuroconv==0.9.0",
+  "neuroconv==0.9.3",
   "nwbinspector",
   "roiextractors==0.7.2",
   # Behavior interfaces from https://github.com/h-mayorquin/IBL-to-nwb/tree/heberto_conversion
