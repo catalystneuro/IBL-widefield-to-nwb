@@ -13,7 +13,7 @@ git clone https://github.com/catalystneuro/IBL-widefield-to-nwb
 cd IBL-widefield-to-nwb
 conda env create --file make_env.yml
 conda activate ibl-widefield-to-nwb-env
-uv pip install --editable .
+uv pip install --system --editable .
 ```
 
 This creates a [conda environment](https://docs.conda.io/projects/conda/en/latest/user-guide/concepts/environments.html) which isolates the conversion code from your system libraries.  We recommend that you run all your conversion related tasks and analysis from the created environment in order to minimize issues related to package dependencies.
@@ -28,7 +28,7 @@ Then you can run
 cd IBL-widefield-to-nwb
 conda env create --file make_env.yml
 conda activate ibl-widefield-to-nwb-env
-uv pip install --editable .
+uv pip install --system --editable .
 ```
 
 Alternatively, if you want to avoid conda altogether (for example if you use another virtual environment tool) you can install the repository with the following commands using `uv` ([installation instructions](https://docs.astral.sh/uv/getting-started/installation/)):
@@ -36,7 +36,7 @@ Alternatively, if you want to avoid conda altogether (for example if you use ano
 ```bash
 git clone https://github.com/catalystneuro/IBL-widefield-to-nwb
 cd IBL-widefield-to-nwb
-uv pip install --editable .
+uv pip install --system --editable .
 ```
 
 Note:
