@@ -13,6 +13,7 @@ git clone https://github.com/catalystneuro/IBL-widefield-to-nwb
 cd IBL-widefield-to-nwb
 conda env create --file make_env.yml
 conda activate ibl-widefield-to-nwb-env
+uv pip install --editable .
 ```
 
 This creates a [conda environment](https://docs.conda.io/projects/conda/en/latest/user-guide/concepts/environments.html) which isolates the conversion code from your system libraries.  We recommend that you run all your conversion related tasks and analysis from the created environment in order to minimize issues related to package dependencies.
@@ -27,22 +28,24 @@ Then you can run
 cd IBL-widefield-to-nwb
 conda env create --file make_env.yml
 conda activate ibl-widefield-to-nwb-env
+uv pip install --editable .
 ```
 
-Alternatively, if you want to avoid conda altogether (for example if you use another virtual environment tool) you can install the repository with the following commands using only pip:
+Alternatively, if you want to avoid conda altogether (for example if you use another virtual environment tool) you can install the repository with the following commands using `uv` ([installation instructions](https://docs.astral.sh/uv/getting-started/installation/)):
 
 ```bash
 git clone https://github.com/catalystneuro/IBL-widefield-to-nwb
 cd IBL-widefield-to-nwb
-pip install --editable .
+uv pip install --editable .
 ```
 
 Note:
 both of the methods above install the repository in [editable mode](https://pip.pypa.io/en/stable/cli/pip_install/#editable-installs).
 The dependencies for this environment are stored in the dependencies section of the `pyproject.toml` file.
+This project uses `uv` instead of `pip` because some dependencies require version overrides that only `uv` supports.
 
 ### Running a specific conversion
-Once you have installed the package with pip, you can run any of the conversion scripts in a notebook or a python file:
+Once you have installed the package, you can run any of the conversion scripts in a notebook or a python file:
 
 https://github.com/catalystneuro/IBL-widefield-to-nwb//tree/main/src/widefield2025/convert_session.py
 
@@ -88,11 +91,11 @@ Each conversion is organized in a directory of its own in the `src` directory:
 
         └── __init__.py
 
-For example, for the conversion `widefield2025` you can find a directory located in `src/IBL-widefield-to-nwb/widefield2025`. 
+For example, for the conversion `widefield2025` you can find a directory located in `src/IBL-widefield-to-nwb/widefield2025`.
 Inside each conversion directory you can find the following files:
 
 
-* `convert_sesion.py`: this script defines the function to convert one full session of the conversion. 
+* `convert_sesion.py`: this script defines the function to convert one full session of the conversion.
 * `metadata.yml`: metadata in yaml format for this specific conversion.
 * `behaviorinterface.py`: the behavior interface. Usually ad-hoc for each conversion.
 * `nwbconverter.py`: the place where the `NWBConverter` class is defined.
