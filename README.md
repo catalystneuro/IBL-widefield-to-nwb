@@ -2,34 +2,8 @@
 NWB conversion scripts for IBL-widefield lab data to the
 [Neurodata Without Borders](https://nwb-overview.readthedocs.io/) data format.
 
-
 ## Installation
-## Basic installation
 
-You can install the latest release of the package with pip:
-
-```
-pip install IBL-widefield-to-nwb
-```
-
-We recommend that you install the package inside a [virtual environment](https://docs.python.org/3/tutorial/venv.
-html). A simple way of doing this is to use a [conda environment](https://docs.conda.
-io/projects/conda/en/latest/user-guide/concepts/environments.html) from the `conda` package manager ([installation 
-instructions](https://docs.conda.io/en/latest/miniconda.html)). Detailed instructions on how to use conda 
-environments can be found in their [documentation](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html).
-
-### Running a specific conversion
-Once you have installed the package with pip, you can run any of the conversion scripts in a notebook or a python file:
-
-https://github.com/catalystneuro/IBL-widefield-to-nwb//tree/main/src/widefield2025/convert_session.py
-
-Copy or download this file run the script with the following command:
-
-```
-python convert_session.py
-```
-
-## Installation from GitHub
 Another option is to install the package directly from Github. This option has the advantage that the source code can be modified if you need to amend some of the code we originally provided to adapt to future experimental differences. To install the conversion from GitHub you will need to use `git` ([installation instructions](https://github.com/git-guides/install-git)). We also recommend the installation of `conda` ([installation instructions](https://docs.conda.io/en/latest/miniconda.html)) as it contains all the required machinery in a single and simple install.
 
 From a terminal (note that conda should install one in your system) you can do the following:
@@ -72,6 +46,11 @@ If the project has more than one conversion, you can install the requirements fo
 ```
 pip install --editable .[widefield2025]
 ```
+
+### Running a specific conversion
+Once you have installed the package with pip, you can run any of the conversion scripts in a notebook or a python file:
+
+https://github.com/catalystneuro/IBL-widefield-to-nwb//tree/main/src/widefield2025/convert_session.py
 
 You can run a specific conversion with the following command:
 ```
