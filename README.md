@@ -42,12 +42,6 @@ both of the methods above install the repository in [editable mode](https://pip.
 The dependencies for this environment are stored in the dependencies section of the `pyproject.toml` file.
 
 ### Running a specific conversion
-If the project has more than one conversion, you can install the requirements for a specific conversion with the following command:
-```
-pip install --editable .[widefield2025]
-```
-
-### Running a specific conversion
 Once you have installed the package with pip, you can run any of the conversion scripts in a notebook or a python file:
 
 https://github.com/catalystneuro/IBL-widefield-to-nwb//tree/main/src/widefield2025/convert_session.py
