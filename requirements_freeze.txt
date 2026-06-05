@@ -144,7 +144,7 @@ Psychofit==1.0.0.post0
 psygnal==0.15.1
 ptyprocess==0.7.0
 pure-eval==0.2.2
-pyarrow==20.0.0
+pyarrow==23.0.1
 pycparser==2.21
 pycryptodomex==3.23.0
 pydantic==2.11.9
